@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pm_dashboard"
+authors = [
+  { name="SunFounder", email="service@sunfounder.com" },
+]
+description = "Library for Sunfounder Power Control"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU License",
+  "Operating System :: OS Independent",
+]
+version = "0.0.1"
+
+dependencies = [
+  'flask',
+  'influxdb',
+]
+
+[tool.setuptools]
+packages = ["pm_dashboard"]
+
+[project.urls]
+"Homepage" = "https://github.com/sunfounder/pm_dashboard"
+"Bug Tracker" = "https://github.com/sunfounder/pm_dashboard/issues"
+
+[project.scripts]
+pm_dashboard = "pm_dashboard:main"

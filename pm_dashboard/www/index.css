@@ -1,0 +1,11 @@
+body{
+  margin: 0 auto;
+}
+html{
+  /* background: radial-gradient(circle at 10% 10%, rgba(119, 90, 158, 0.8) 10%, rgba(119, 90, 158, 0.6) 20%, rgba(119, 90, 158, 0.4) 30%, rgba(119, 90, 158, 0.2) 40%, transparent 50%) fixed, radial-gradient(circle at 110% 90%, rgba(67, 64, 71, 0.8) 30%, rgba(67, 64, 71, 0.6) 40%, rgba(67, 64, 71, 0.4) 50%, rgba(67, 64, 71, 0.2) 60%, transparent 70%), linear-gradient(290deg, rgba(119, 90, 158, 0.8) 0%, rgba(67, 64, 71, 0.6) 40%); */
+  /* background:  radial-gradient(circle at 10% 10%, rgba(0, 166, 255, 0.4) 10%, transparent 10.2%), radial-gradient(circle at 90% 85%, rgba(0, 142, 255, 0.4) 20%, transparent 20.2%), radial-gradient(circle at 90% 85%, white 20%, transparent 20.2%), linear-gradient(200deg, rgb(0, 142, 255) 0%, rgb(6, 240, 240) 60%);; */
+}
+#root{
+  overflow-x: hidden;
+  width: 100%;
+}
