@@ -29,3 +29,28 @@ python3 -m build
 # Install the package
 pip3 install dist/*.whl
 ```
+
+## WWW
+
+This Package include a web page, located in `pm_dashboard/www` is a compiled web page from [Pironman Dashboard WWW](https://github.com/sunfounder/pm_dashboard_www) repository.
+
+To update the web page, download the [latest release](https://github.com/sunfounder/pm_dashboard_www/releases/latest/download/www.zip)
+```bash
+wget https://github.com/sunfounder/pm_dashboard_www/releases/latest/download/www.zip
+```
+Unzip the file
+```bash
+unzip www.zip
+```
+Remove the old `www` folder
+```bash
+rm -r pm_dashboard/www
+```
+Copy the web page to the `pm_dashboard/www` directory
+```bash
+cp -r www pm_dashboard/www
+```
+Clean the files
+```bash
+rm www.zip
+```

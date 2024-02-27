@@ -42,12 +42,12 @@ class DataLogger:
         self.spc = None
         self.db = None
 
-        self.updata_settings(settings)
+        self.update_settings(settings)
         
         self.thread = None
         self.running = False
 
-    def updata_settings(self, settings):
+    def update_settings(self, settings):
         if 'database' in settings:
             self.database = settings['database']
             self.db = Database(self.database, log=self.log)
