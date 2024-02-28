@@ -1,6 +1,7 @@
 
 import threading
 import logging
+from os import listdir
 
 import flask
 from flask import request, send_from_directory
@@ -11,13 +12,16 @@ from werkzeug.serving import make_server
 from .data_logger import DataLogger
 from .database import Database
 
-__package_name__ = __name__.split('.')[0]
-WWW_PATH = resource_filename(__package_name__, 'www')
-API_PREFIX = '/api/v1.0'
-HOST = '0.0.0.0'
-PORT = 34001
+DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
-default_settings = {
+__package_name__ = __name__.split('.')[0]
+__log_path__ = '/var/log/pm_dashboard'
+__www_path__ = resource_filename(__package_name__, 'www')
+__api_prefix__ = '/api/v1.0'
+__host__ = '0.0.0.0'
+__port__ = 34001
+
+__default_settings__ = {
     "database": "pm_dashboard",
     "interval": 1,
     "spc": False,
@@ -25,12 +29,69 @@ default_settings = {
 
 __db__ = None
 __config__ = {}
-__app__ = flask.Flask(__name__, static_folder=WWW_PATH)
-cors = CORS(__app__)
+__app__ = flask.Flask(__name__, static_folder=__www_path__)
+__cors__ = CORS(__app__)
 __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
+__mqtt_connected__ = False
 
 __on_config_changed__ = lambda config: None
+
+def on_mqtt_connected(client, userdata, flags, rc):
+    global __mqtt_connected__
+    if rc==0:
+        __mqtt_connected__ = True
+    else:
+        __mqtt_connected__ = False
+
+def _get_log(name, line_count=100, filter=[], level="INFO"):
+    with open(f"{__log_path__}/{name}", 'r') as f:
+        lines = f.readlines()
+        lines = lines[-line_count:]
+        data = []
+        for line in lines:
+            check = True
+            if len(filter) > 0:
+                for f in filter:
+                    if f in line:
+                        break
+                else:
+                    check = False
+            log_level = DEBUG_LEVELS.index(level)
+            current_log_level = DEBUG_LEVELS.index(get_log_level(line))
+            if current_log_level < log_level:
+                check = False
+            if check:
+                data.append(line)
+        return data
+
+def _test_mqtt(config, timeout=5):
+    global __mqtt_connected__
+    import paho.mqtt.client as mqtt
+    from socket import gaierror
+    import time
+    __mqtt_connected__ = None
+    client = mqtt.Client()
+    client.on_connect = on_mqtt_connected
+    client.username_pw_set(config['username'], config['password'])
+    try:
+        client.connect(config['host'], config['port'])
+    except gaierror:
+        return False, "Connection failed, Check hostname and port"
+    timestart = time.time()
+    while time.time() - timestart < timeout:
+        client.loop()
+        if __mqtt_connected__ == True:
+            return True, None
+        elif __mqtt_connected__ == False:
+            return False, "Connection failed, Check username and password"
+    return False, "Timeout"
+
+def get_log_level(line):
+    for level in DEBUG_LEVELS:
+        if f"[{level}]" in line:
+            return level
+    return DEBUG_LEVELS.index('INFO')
 
 # Host dashboard page
 @__app__.route('/')
@@ -48,59 +109,61 @@ def serve_static(filename):
         items = filename.split('/')
         filename = items[-1]
         path = path + '/' + '/'.join(items[:-1])
-    print(f'serve_static path: {path}, filename: {filename}')
     return send_from_directory(path, filename)
 
-def on_mqtt_connected(client, userdata, flags, rc):
-    global mqtt_connected
-    if rc==0:
-        print("Connected to broker")
-        mqtt_connected = True
-    else:
-        print("Connection failed")
-        mqtt_connected = False
-
 # host API
-
-@__app__.route(f'{API_PREFIX}/get-device-info')
+@__app__.route(f'{__api_prefix__}/get-device-info')
 @cross_origin()
 def get_device_info():
     return {"status": True, "data": __device_info__}
 
-@__app__.route(f'{API_PREFIX}/test')
+@__app__.route(f'{__api_prefix__}/test')
 @cross_origin()
 def test():
     return {"status": True, "data": "OK"}
 
-@__app__.route(f'{API_PREFIX}/test-mqtt')
+@__app__.route(f'{__api_prefix__}/test-mqtt')
 @cross_origin()
 def test_mqtt():
-    import paho.mqtt.client as mqtt
-    from socket import gaierror
-    import time
     host = request.args.get("host")
     port = request.args.get("port")
     username = request.args.get("username")
     password = request.args.get("password")
+    mqtt_config = {}
+    data = None
+    status = True
+    error = None
+    if host is None:
+        status = False
+        error = "[ERROR] host not found"
+    elif port is None:
+        status = False
+        error = "[ERROR] port not found"
+    elif username is None:
+        status = False
+        error = "[ERROR] username not found"
+    elif password is None:
+        status = False
+        error = "[ERROR] password not found"
+    else:
+        mqtt_config['host'] = host
+        mqtt_config['port'] = int(host)
+        mqtt_config['username'] = username
+        mqtt_config['password'] = password
+        result = test_mqtt(mqtt_config)
+        data = {
+            "status": result[0],
+            "error": result[1]
+        }
+        status = True
+    result = {"status": status}
+    if status:
+        result['data'] = data
+    else:
+        result['error'] = error
+    return result
 
-    mqtt_connected = None
-    client = mqtt.Client()
-    client.on_connect = on_mqtt_connected
-    client.username_pw_set(username, password)
-    try:
-        client.connect(host, port)
-    except gaierror:
-        return False, "Connection failed, Check hostname and port"
-    timestart = time.time()
-    while time.time() - timestart < 5:
-        client.loop()
-        if mqtt_connected == True:
-            return True, None
-        elif mqtt_connected == False:
-            return False, "Connection failed, Check username and password"
-    return False, "Timeout"
-
-@__app__.route(f'{API_PREFIX}/get-history')
+@__app__.route(f'{__api_prefix__}/get-history')
 @cross_origin()
 def get_history():
     try:
@@ -111,7 +174,7 @@ def get_history():
     except Exception as e:
         return {"status": False, "error": str(e)}
 
-@__app__.route(f'{API_PREFIX}/get-time-range')
+@__app__.route(f'{__api_prefix__}/get-time-range')
 @cross_origin()
 def get_time_range():
     try:
@@ -123,33 +186,67 @@ def get_time_range():
     except Exception as e:
         return {"status": False, "error": str(e)}
 
-@__app__.route(f'{API_PREFIX}/get-config')
+@__app__.route(f'{__api_prefix__}/get-config')
 @cross_origin()
 def get_config():
     return {"status": True, "data": __config__}
 
-@__app__.route(f'{API_PREFIX}/set-config', methods=['POST'])
+@__app__.route(f'{__api_prefix__}/get-log-list')
+@cross_origin()
+def get_log_list():
+    log_files = listdir(__log_path__)
+    return {"status": True, "data": log_files}
+
+@__app__.route(f'{__api_prefix__}/get-log')
+@cross_origin()
+def get_log():
+    filename = request.args.get("filename")
+    filter = request.args.get("filter")
+    level = request.args.get("level")
+    lines = request.args.get("lines")
+    if filename is None:
+        return {"status": False, "error": "[ERROR] file not found"}
+    if lines is None:
+        lines = 100
+    else:
+        lines = int(lines)
+    if filter is not None:
+        filter = filter.split(',')
+    else:
+        filter = []
+    if level is None:
+        level = "INFO"
+    else:
+        if level not in DEBUG_LEVELS:
+            return {"status": False, "error": f"[ERROR] level {level} not found"}
+    content = _get_log(filename, lines, filter, level)
+    return {"status": True, "data": content}
+
+@__app__.route(f'{__api_prefix__}/set-config', methods=['POST'])
 @cross_origin()
 def set_config():
     data = request.json['data']
-    print("set_config: ", data)
     __on_config_changed__(data)
     return {"status": True, "data": __config__}
 
 
 class PMDashboard(threading.Thread):
-    def __init__(self, device_info=None, peripherals=[], settings=default_settings, config=None, get_logger=None):
-        global __config__, __device_info__, __db__
+    def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
+        global __config__, __device_info__, __db__, __log_path__
         __device_info__ = device_info
+        __log_path__ = f'/var/log/{device_info["id"]}'
 
         threading.Thread.__init__(self)
-        self.server = make_server(HOST, PORT, __app__)
+        self.server = make_server(__host__, __port__, __app__)
         self.ctx = __app__.app_context()
         self.ctx.push()
     
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
+        __app__.logger.handlers = []
+        for handler in __app__.logger.handlers:
+            self.log.addHandler(handler)
 
         self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
         __db__ = Database(settings['database'], get_logger=get_logger)

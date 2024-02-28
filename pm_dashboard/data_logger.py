@@ -130,7 +130,6 @@ class DataLogger:
         self.thread = threading.Thread(target=self.loop)
         self.thread.start()
         self.log.info("Data Logger Start")
-        print("Data Logger Start")
 
     def stop(self):
         if not self.running:
