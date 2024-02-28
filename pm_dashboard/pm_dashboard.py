@@ -1,10 +1,15 @@
 
+import threading
+import logging
+
 import flask
 from flask import request, send_from_directory
-import threading
+from flask_cors import CORS, cross_origin
 from pkg_resources import resource_filename
 from werkzeug.serving import make_server
+
 from .data_logger import DataLogger
+from .database import Database
 
 __package_name__ = __name__.split('.')[0]
 WWW_PATH = resource_filename(__package_name__, 'www')
@@ -18,31 +23,33 @@ default_settings = {
     "spc": False,
 }
 
-db = None
+__db__ = None
+__config__ = {}
+__app__ = flask.Flask(__name__, static_folder=WWW_PATH)
+cors = CORS(__app__)
+__app__.config['CORS_HEADERS'] = 'Content-Type'
+__device_info__ = {}
 
-app = flask.Flask(__name__, static_folder=WWW_PATH)
+__on_config_changed__ = lambda config: None
 
 # Host dashboard page
-@app.route('/')
+@__app__.route('/')
+@cross_origin()
 def dashboard():
-    with open(f'{app.static_folder}/index.html') as f:
+    with open(f'{__app__.static_folder}/index.html') as f:
         return f.read()
 
 # Host static files for dashboard page
-@app.route('/<path:filename>')
+@__app__.route('/<path:filename>')
+@cross_origin()
 def serve_static(filename):
-    path = app.static_folder
+    path = __app__.static_folder
     if '/' in filename:
         items = filename.split('/')
         filename = items[-1]
         path = path + '/' + '/'.join(items[:-1])
     print(f'serve_static path: {path}, filename: {filename}')
     return send_from_directory(path, filename)
-
-# host API
-@app.route(f'{API_PREFIX}/test')
-def test():
-    return {"status": True, "data": "OK"}
 
 def on_mqtt_connected(client, userdata, flags, rc):
     global mqtt_connected
@@ -53,7 +60,20 @@ def on_mqtt_connected(client, userdata, flags, rc):
         print("Connection failed")
         mqtt_connected = False
 
-@app.route(f'{API_PREFIX}/test-mqtt')
+# host API
+
+@__app__.route(f'{API_PREFIX}/get-device-info')
+@cross_origin()
+def get_device_info():
+    return {"status": True, "data": __device_info__}
+
+@__app__.route(f'{API_PREFIX}/test')
+@cross_origin()
+def test():
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{API_PREFIX}/test-mqtt')
+@cross_origin()
 def test_mqtt():
     import paho.mqtt.client as mqtt
     from socket import gaierror
@@ -80,41 +100,65 @@ def test_mqtt():
             return False, "Connection failed, Check username and password"
     return False, "Timeout"
 
-@app.route(f'{API_PREFIX}/get-history')
+@__app__.route(f'{API_PREFIX}/get-history')
+@cross_origin()
 def get_history():
     try:
         num = request.args.get("n")
         num = int(num)
-        data = db.get("history", n=num)
+        data = __db__.get("history", n=num)
         return {"status": True, "data": data}
     except Exception as e:
         return {"status": False, "error": str(e)}
-    
+
+@__app__.route(f'{API_PREFIX}/get-time-range')
+@cross_origin()
+def get_time_range():
+    try:
+        start = request.args.get("start")
+        end = request.args.get("end")
+        key = request.args.get("key")
+        data = __db__.get_data_by_time_range("history", start, end, key)
+        return {"status": True, "data": data}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
+@__app__.route(f'{API_PREFIX}/get-config')
+@cross_origin()
+def get_config():
+    return {"status": True, "data": __config__}
+
+@__app__.route(f'{API_PREFIX}/set-config', methods=['POST'])
+@cross_origin()
+def set_config():
+    data = request.json['data']
+    print("set_config: ", data)
+    __on_config_changed__(data)
+    return {"status": True, "data": __config__}
+
+
 class PMDashboard(threading.Thread):
-    def __init__(self, settings=default_settings, log=None):
-    
+    def __init__(self, device_info=None, peripherals=[], settings=default_settings, config=None, get_logger=None):
+        global __config__, __device_info__, __db__
+        __device_info__ = device_info
+
         threading.Thread.__init__(self)
-        self.server = make_server(HOST, PORT, app)
-        self.ctx = app.app_context()
+        self.server = make_server(HOST, PORT, __app__)
+        self.ctx = __app__.app_context()
         self.ctx.push()
     
-        if log is None:
-            import logging
-            log = logging.getLogger(__name__)
-        self.log = log
+        if get_logger is None:
+            get_logger = logging.getLogger
+        self.log = get_logger(__name__)
 
-        self.database = None
-        self.data_logger = DataLogger(settings, log=log)
+        self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
+        __db__ = Database(settings['database'], get_logger=get_logger)
+        for key, value in config.items():
+            __config__[key] = value
 
-        self.update_settings(settings)
-
-    def update_settings(self, settings):
-        from .database import Database
-        global db
-        if 'database' in settings:
-            self.database = settings['database']
-            db = Database(self.database, log=self.log)
-        self.data_logger.update_settings(settings)
+    def set_on_config_changed(self, func):
+        global __on_config_changed__
+        __on_config_changed__ = func
 
     def run(self):
         self.log.info("Dashboard Server start")

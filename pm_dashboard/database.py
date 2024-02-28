@@ -4,11 +4,11 @@ import json
 import logging
 
 class Database:
-    def __init__(self, database, log=None):
-        if log is None:
-            self.log = logging.getLogger(__name__)
-        else:
-            self.log = log
+    def __init__(self, database, get_logger=None):
+        if get_logger is None:
+            get_logger = logging.getLogger
+        self.log = get_logger(__name__)
+
         try:
             self.client = InfluxDBClient(host='localhost', port=8086)
         except Exception as e:

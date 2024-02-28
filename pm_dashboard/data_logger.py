@@ -27,42 +27,28 @@ default_settings = {
 
 class DataLogger:
 
-    def __init__(self, settings=default_settings, log=None):
-        if log is None:
-            log = logging.getLogger(__name__)
-        self.log = log
+    def __init__(self, settings=default_settings, peripherals=[], get_logger=None):
+        if get_logger is None:
+            get_logger = logging.getLogger
+        self.log = get_logger(__name__)
+
         try:
             self.client = InfluxDBClient(host='localhost', port=8086)
         except Exception as e:
             self.log.error(f"Failed to connect to influxdb: {e}")
             return
 
-        self.database = None
-        self.interval = 1
         self.spc = None
         self.db = None
 
-        self.update_settings(settings)
-        
         self.thread = None
         self.running = False
 
-    def update_settings(self, settings):
-        if 'database' in settings:
-            self.database = settings['database']
-            self.db = Database(self.database, log=self.log)
-        if 'interval' in settings:
-            if not isinstance(settings['interval'], int):
-                self.log.error(f"Invalid interval: {settings['interval']}, should be int")
-            self.interval = settings['interval']
-        if 'spc' in settings:
-            if not isinstance(settings['spc'], bool):
-                self.log.error(f"Invalid spc: {settings['spc']}, should be bool")
-            if settings['spc']:
-                from spc import SPC
-                self.spc = SPC()
-            else:
-                self.spc = None
+        self.db = Database(settings['database'], get_logger=get_logger)
+        self.interval = settings['interval']
+        if 'spc' in peripherals:
+            from spc import SPC
+            self.spc = SPC()
 
     def loop(self):
         while self.running:
