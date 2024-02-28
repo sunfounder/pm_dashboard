@@ -15,11 +15,6 @@ Pironman Dashboard is a simple server that provides a REST API and host a web pa
 apt-get -y install python3 python3-pip python3-venv git wget unzip
 pip3 install build
 
-# Download dashboard www
-wget https://github.com/sunfounder/pm_dashboard_client/releases/latest/download/pm_dashboard_www.zip
-unzip pm_dashboard_www.zip
-cp -r pm_dashboard_www/pm_dashboard_www /opt/pm_dashboard_client
-
 # Clone the repository
 git clone https://github.com/sunfounder/pm_dashboard.git
 
