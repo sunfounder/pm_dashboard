@@ -3,6 +3,7 @@ from influxdb.exceptions import InfluxDBClientError
 import json
 import logging
 import subprocess
+import time
 
 class Database:
     def __init__(self, database, get_logger=None):
@@ -10,22 +11,36 @@ class Database:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
 
+        self.client = InfluxDBClient(host='localhost', port=8086)
+
         if not Database.is_influxdb_running():
             self.log.info("Start influxdb service")
             Database.start_influxdb()
-        try:
-            self.client = InfluxDBClient(host='localhost', port=8086)
-        except Exception as e:
-            self.log.error(f"Failed to connect to influxdb: {e}")
-            return
-        self.database = database
+            # Wait 2 seconds for InfluxDB to start
+            time.sleep(2)
 
+        for _ in range(3):
+            if self.is_ready():
+                break
+            else:
+                time.sleep(1)
+                self.log.warning("Database is not ready, trying again...")
+        else:
+            self.log.error("Database is not ready after 3 attempts")
+
+        self.database = database
         databases = self.client.get_list_database()
         if not any(db['name'] == self.database for db in databases):
             self.client.create_database(self.database)
             self.log.info(f"Database '{database}' not exit, created successfully")
 
         self.client.switch_database(self.database)
+
+    def is_ready(self):
+        try:
+            return self.client.ping()
+        except Exception as e:
+            return False
 
     @staticmethod
     def is_influxdb_running():
@@ -43,6 +58,9 @@ class Database:
 
 
     def set(self, measurement, data):
+        if not self.is_ready():
+            self.log.error('Database is not ready')
+            return []
         json_body = [
             {
                 "measurement": measurement,
@@ -58,6 +76,9 @@ class Database:
             return False, str(e)
 
     def get_data_by_time_range(self, measurement, start_time, end_time, key="*"):
+        if not self.is_ready():
+            self.log.error('Database is not ready')
+            return []
         query = f"SELECT {key} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time}"
         result = self.client.query(query)
         return list(result.get_points())
@@ -71,6 +92,9 @@ class Database:
         return False
 
     def get(self, measurement, key="*", n=1):
+        if not self.is_ready():
+            self.log.error('Database is not ready')
+            return []
         for _ in range(3):
             query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
             result = self.client.query(query)
