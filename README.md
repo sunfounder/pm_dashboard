@@ -12,7 +12,7 @@ Pironman Dashboard is a simple server that provides a REST API and host a web pa
 
 ```bash
 # Install development dependencies
-apt-get -y install python3 python3-pip python3-venv git wget unzip
+apt-get -y install python3 python3-pip python3-venv git wget unzip influxdb
 pip3 install build
 
 # Clone the repository
