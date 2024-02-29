@@ -14,19 +14,21 @@ class Database:
         self.client = InfluxDBClient(host='localhost', port=8086)
 
         if not Database.is_influxdb_running():
-            self.log.info("Start influxdb service")
+            self.log.info("Starting influxdb service")
             Database.start_influxdb()
             # Wait 2 seconds for InfluxDB to start
             time.sleep(2)
 
         for _ in range(3):
+            self.log.debug("Checking if influxdb is ready...")
             if self.is_ready():
+                self.log.info("Influxdb is ready")
                 break
             else:
                 time.sleep(1)
-                self.log.warning("Database is not ready, trying again...")
+                self.log.warning("Influxdb is not ready, trying again...")
         else:
-            self.log.error("Database is not ready after 3 attempts")
+            self.log.error("Influxdb is not ready after 3 attempts")
 
         self.database = database
         databases = self.client.get_list_database()
@@ -56,6 +58,10 @@ class Database:
         # Start InfluxDB in the background
         subprocess.Popen(["influxd"])
 
+    @staticmethod
+    def stop_influxdb():
+        # Stop InfluxDB
+        subprocess.Popen(["pkill", "influxd"])
 
     def set(self, measurement, data):
         if not self.is_ready():
@@ -115,3 +121,5 @@ class Database:
 
     def close(self):
         self.client.close()
+        Database.stop_influxdb()
+

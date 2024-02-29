@@ -267,6 +267,7 @@ class PMDashboard(threading.Thread):
 
     def stop(self):
         self.data_logger.stop()
+        __db__.close()
         self.shutdown()
         self.log.info("Dashboard Server stopped")
 
