@@ -2,6 +2,7 @@ from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 import json
 import logging
+import subprocess
 
 class Database:
     def __init__(self, database, get_logger=None):
@@ -9,6 +10,9 @@ class Database:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
 
+        if not Database.is_influxdb_running():
+            self.log.info("Start influxdb service")
+            Database.start_influxdb()
         try:
             self.client = InfluxDBClient(host='localhost', port=8086)
         except Exception as e:
@@ -22,6 +26,21 @@ class Database:
             self.log.info(f"Database '{database}' not exit, created successfully")
 
         self.client.switch_database(self.database)
+
+    @staticmethod
+    def is_influxdb_running():
+        try:
+            # Use 'pgrep' to find the process
+            subprocess.check_output(["pgrep", "influxd"])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    @staticmethod
+    def start_influxdb():
+        # Start InfluxDB in the background
+        subprocess.Popen(["influxd"])
+
 
     def set(self, measurement, data):
         json_body = [
