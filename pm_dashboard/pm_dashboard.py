@@ -24,7 +24,6 @@ __port__ = 34001
 __default_settings__ = {
     "database": "pm_dashboard",
     "interval": 1,
-    "spc": False,
 }
 
 __db__ = None
@@ -150,7 +149,7 @@ def test_mqtt():
         mqtt_config['port'] = int(host)
         mqtt_config['username'] = username
         mqtt_config['password'] = password
-        result = test_mqtt(mqtt_config)
+        result = _test_mqtt(mqtt_config)
         data = {
             "status": result[0],
             "error": result[1]

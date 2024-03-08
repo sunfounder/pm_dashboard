@@ -22,7 +22,6 @@ from sf_rpi_status import \
 default_settings = {
     "database": "pm_dashboard",
     "interval": 1,
-    "spc": False,
 }
 
 class DataLogger:
@@ -47,7 +46,7 @@ class DataLogger:
         self.db = Database(settings['database'], get_logger=get_logger)
         self.interval = settings['interval']
         if 'spc' in peripherals:
-            from spc import SPC
+            from spc.spc import SPC
             self.spc = SPC()
 
     def loop(self):
