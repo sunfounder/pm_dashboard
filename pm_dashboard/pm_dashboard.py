@@ -236,9 +236,6 @@ class PMDashboard(threading.Thread):
         __log_path__ = f'/var/log/{device_info["id"]}'
 
         threading.Thread.__init__(self)
-        self.server = make_server(__host__, __port__, __app__)
-        self.ctx = __app__.app_context()
-        self.ctx.push()
     
         if get_logger is None:
             get_logger = logging.getLogger
@@ -253,6 +250,12 @@ class PMDashboard(threading.Thread):
             __config__[key] = value
 
         self.started = False
+
+    def start(self):
+        self.server = make_server(__host__, __port__, __app__)
+        self.ctx = __app__.app_context()
+        self.ctx.push()
+        threading.Thread.start(self)
 
     def set_on_config_changed(self, func):
         global __on_config_changed__
