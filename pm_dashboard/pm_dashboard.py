@@ -252,6 +252,7 @@ class PMDashboard(threading.Thread):
         self.started = False
 
     def start(self):
+        __db__.start()
         self.server = make_server(__host__, __port__, __app__)
         self.ctx = __app__.app_context()
         self.ctx.push()

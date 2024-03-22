@@ -125,6 +125,7 @@ class DataLogger:
         if self.running:
             self.log.warning("Already running")
             return
+        self.db.start()
         self.running = True
         self.thread = threading.Thread(target=self.loop)
         self.thread.start()

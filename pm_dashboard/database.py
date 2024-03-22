@@ -10,9 +10,11 @@ class Database:
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
+        self.database = database
 
         self.client = InfluxDBClient(host='localhost', port=8086)
-
+    
+    def start(self):
         if not Database.is_influxdb_running():
             self.log.info("Starting influxdb service")
             Database.start_influxdb()
@@ -30,11 +32,10 @@ class Database:
         else:
             self.log.error("Influxdb is not ready after 3 attempts")
 
-        self.database = database
         databases = self.client.get_list_database()
         if not any(db['name'] == self.database for db in databases):
             self.client.create_database(self.database)
-            self.log.info(f"Database '{database}' not exit, created successfully")
+            self.log.info(f"Database '{self.database}' not exit, created successfully")
 
         self.client.switch_database(self.database)
 
