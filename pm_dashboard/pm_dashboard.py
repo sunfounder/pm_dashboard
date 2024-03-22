@@ -252,6 +252,8 @@ class PMDashboard(threading.Thread):
         for key, value in config.items():
             __config__[key] = value
 
+        self.started = False
+
     def set_on_config_changed(self, func):
         global __on_config_changed__
         __on_config_changed__ = func
@@ -260,13 +262,15 @@ class PMDashboard(threading.Thread):
         self.log.info("Dashboard Server start")
         self.data_logger.start()
         self.server.serve_forever()
+        self.started = True
 
     def shutdown(self):
         self.server.shutdown()
 
     def stop(self):
-        self.data_logger.stop()
+        if self.started:
+            self.shutdown()
+            self.data_logger.stop()
         __db__.close()
-        self.shutdown()
         self.log.info("Dashboard Server stopped")
 
