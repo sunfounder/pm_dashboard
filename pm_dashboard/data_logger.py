@@ -18,6 +18,7 @@ from sf_rpi_status import \
     get_macs, \
     get_network_connection_type, \
     get_network_speed
+from .utils import get_pwm_fan_speed
 
 default_settings = {
     "database": "pm_dashboard",
@@ -105,6 +106,9 @@ class DataLogger:
             data['network_type'] = "&".join(network_connection_type)
             data['network_upload_speed'] = network_speed.upload
             data['network_download_speed'] = network_speed.download
+
+            if 'pwm_fan' in self.peripherals:
+                data['pwm_fan_speed'] = get_pwm_fan_speed()
 
             if self.spc is not None:
                 spc = self.spc.read_all()
