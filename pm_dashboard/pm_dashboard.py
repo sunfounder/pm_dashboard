@@ -90,7 +90,7 @@ def get_log_level(line):
     for level in DEBUG_LEVELS:
         if f"[{level}]" in line:
             return level
-    return DEBUG_LEVELS.index('INFO')
+    return 'INFO'
 
 # Host dashboard page
 @__app__.route('/')
