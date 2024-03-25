@@ -251,6 +251,10 @@ class PMDashboard(threading.Thread):
 
         self.started = False
 
+    def update_status(self, status):
+        if self.started:
+            self.data_logger.update_status(status)
+
     def start(self):
         __db__.start()
         self.server = make_server(__host__, __port__, __app__)

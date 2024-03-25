@@ -50,6 +50,11 @@ class DataLogger:
         if 'spc' in peripherals:
             from spc.spc import SPC
             self.spc = SPC()
+        
+        self.status = {}
+
+    def update_status(self, status):
+        self.status = status
 
     def loop(self):
         while self.running:
@@ -108,8 +113,8 @@ class DataLogger:
             data['network_upload_speed'] = network_speed.upload
             data['network_download_speed'] = network_speed.download
 
-            if 'pwm_fan' in self.peripherals:
-                data['pwm_fan_speed'] = get_pwm_fan_speed()
+            for name in self.status:
+                data[name] = self.status[name]
 
             if self.spc is not None:
                 spc = self.spc.read_all()
