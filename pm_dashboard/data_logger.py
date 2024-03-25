@@ -46,6 +46,7 @@ class DataLogger:
 
         self.db = Database(settings['database'], get_logger=get_logger)
         self.interval = settings['interval']
+        self.peripherals = peripherals
         if 'spc' in peripherals:
             from spc.spc import SPC
             self.spc = SPC()
