@@ -253,7 +253,10 @@ class PMDashboard(threading.Thread):
 
     def update_status(self, status):
         if self.started:
+            self.log.debug(f"Update status: {status}")
             self.data_logger.update_status(status)
+        else:
+            self.log.error("Dashboard Server not started")
 
     def start(self):
         __db__.start()

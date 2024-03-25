@@ -54,6 +54,7 @@ class DataLogger:
         self.status = {}
 
     def update_status(self, status):
+        self.log.debug(f"Update status: {status}")
         self.status = status
 
     def loop(self):
