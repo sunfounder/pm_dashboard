@@ -5,6 +5,8 @@ import threading
 from influxdb import InfluxDBClient
 
 from .database import Database
+from .utils import log_error
+
 from sf_rpi_status import \
     get_cpu_temperature, \
     get_cpu_percent, \
@@ -18,7 +20,6 @@ from sf_rpi_status import \
     get_macs, \
     get_network_connection_type, \
     get_network_speed
-from .utils import get_pwm_fan_speed
 
 default_settings = {
     "database": "pm_dashboard",
@@ -27,6 +28,7 @@ default_settings = {
 
 class DataLogger:
 
+    @log_error
     def __init__(self, settings=default_settings, peripherals=[], get_logger=None):
         if get_logger is None:
             get_logger = logging.getLogger
@@ -53,9 +55,11 @@ class DataLogger:
         
         self.status = {}
 
+    @log_error
     def update_status(self, status):
         self.status = status
 
+    @log_error
     def loop(self):
         while self.running:
             boot_time = get_boot_time()
@@ -130,6 +134,7 @@ class DataLogger:
 
             time.sleep(self.interval)
 
+    @log_error
     def start(self):
         if self.running:
             self.log.warning("Already running")
@@ -140,6 +145,7 @@ class DataLogger:
         self.thread.start()
         self.log.info("Data Logger Start")
 
+    @log_error
     def stop(self):
         if not self.running:
             self.log.warning("Already stopped")

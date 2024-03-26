@@ -11,6 +11,7 @@ from werkzeug.serving import make_server
 
 from .data_logger import DataLogger
 from .database import Database
+from .utils import log_error
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
@@ -230,6 +231,7 @@ def set_config():
 
 
 class PMDashboard(threading.Thread):
+    @log_error
     def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
         global __config__, __device_info__, __db__, __log_path__
         __device_info__ = device_info
@@ -251,9 +253,11 @@ class PMDashboard(threading.Thread):
 
         self.started = False
 
+    @log_error
     def update_status(self, status):
         self.data_logger.update_status(status)
 
+    @log_error
     def start(self):
         __db__.start()
         self.server = make_server(__host__, __port__, __app__)
@@ -261,19 +265,23 @@ class PMDashboard(threading.Thread):
         self.ctx.push()
         threading.Thread.start(self)
 
+    @log_error
     def set_on_config_changed(self, func):
         global __on_config_changed__
         __on_config_changed__ = func
 
+    @log_error
     def run(self):
         self.log.info("Dashboard Server start")
         self.data_logger.start()
         self.server.serve_forever()
         self.started = True
 
+    @log_error
     def shutdown(self):
         self.server.shutdown()
 
+    @log_error
     def stop(self):
         if self.started:
             self.shutdown()

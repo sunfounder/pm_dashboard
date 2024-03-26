@@ -1,13 +1,8 @@
 
-def get_pwm_fan_speed():
-    import os
-    '''
-    path =  '/sys/devices/platform/cooling_fan/hwmon/*/fan1_input'
-    '''
-    dir = '/sys/devices/platform/cooling_fan/hwmon/'
-    secondary_dir = os.listdir(dir)
-    path = f'{dir}/{secondary_dir[0]}/fan1_input'
-
-    with open(path, 'r') as f:
-        speed = int(f.read())
-    return speed
+def log_error(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            self.log.error(str(e))
+    return wrapper
