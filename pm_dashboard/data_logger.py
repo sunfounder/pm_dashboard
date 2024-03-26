@@ -54,7 +54,6 @@ class DataLogger:
         self.status = {}
 
     def update_status(self, status):
-        self.log.debug(f"Update status: {status}")
         self.status = status
 
     def loop(self):
@@ -64,7 +63,6 @@ class DataLogger:
             macs = get_macs()
             network_connection_type = get_network_connection_type()
             network_speed = get_network_speed()
-
 
             data = {}
             data['cpu_temperature'] = get_cpu_temperature()
