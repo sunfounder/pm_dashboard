@@ -106,7 +106,7 @@ class Database:
             query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
             result = self.client.query(query)
             if self.if_too_many_nulls(list(result.get_points())):
-                self.log.warning(f"Too many nulls in the result of query: {query}, trying again...")
+                self.log.warning(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
                 continue
             break
         else:
