@@ -15,7 +15,7 @@ classifiers = [
   "License :: OSI Approved :: GNU License",
   "Operating System :: OS Independent",
 ]
-version = "0.0.4"
+version = "0.0.5"
 
 dependencies = [
   'flask',
