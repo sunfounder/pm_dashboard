@@ -61,10 +61,10 @@ class Database:
 
     @staticmethod
     def stop_influxdb():
-        # Stop InfluxDB
         subprocess.Popen(["pkill", "influxd"])
 
     def set(self, measurement, data):
+        self.log.debug(f"Setting data to database: measurement={measurement}, data={data}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
@@ -83,6 +83,7 @@ class Database:
             return False, str(e)
 
     def get_data_by_time_range(self, measurement, start_time, end_time, key="*"):
+        self.log.debug(f"Getting data from database: measurement={measurement}, key={key}, start_time={start_time}, end_time={end_time}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
@@ -99,6 +100,7 @@ class Database:
         return False
 
     def get(self, measurement, key="*", n=1):
+        self.log.debug(f"Getting data from database: measurement={measurement}, key={key}, n={n}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
@@ -111,16 +113,17 @@ class Database:
             break
         else:
             return None
+        result = list(result.get_points())
         if n == 1:
-            if len(list(result.get_points())) == 0:
-                return None
+            if len(result) == 0:
+                self.log.warning(f"No data found for query: {query}")
+                result = None
+            result = result[0]
             if key != "*" and key != "time" and "," not in key:
-                return list(result.get_points())[0][key]
-            return list(result.get_points())[0]
-        
-        return list(result.get_points())
+                result = result[key]
+        self.log.debug(f"Got data from database: {result}")
+        return result
 
     def close(self):
         self.client.close()
         Database.stop_influxdb()
-
