@@ -15,12 +15,13 @@ classifiers = [
   "License :: OSI Approved :: GNU License",
   "Operating System :: OS Independent",
 ]
-version = "0.0.5"
+version = "0.0.6"
 
 dependencies = [
-  'flask',
-  'flask_cors',
-  'influxdb',
+  "flask",
+  "flask_cors",
+  "influxdb",
+  "sf_rpi_status @ git+https://github.com/sunfounder/sf_rpi_status.git",
 ]
 
 [tool.setuptools]

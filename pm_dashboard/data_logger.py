@@ -49,9 +49,12 @@ class DataLogger:
         self.db = Database(settings['database'], get_logger=get_logger)
         self.interval = settings['interval']
         self.peripherals = peripherals
-        if 'spc' in peripherals:
+        if 'spc' in settings and settings['spc'] is True:
+            self.log.info("SPC peripheral enabled")
             from spc.spc import SPC
             self.spc = SPC()
+        else:
+            self.log.info("SPC peripheral disabled")
         
         self.status = {}
 

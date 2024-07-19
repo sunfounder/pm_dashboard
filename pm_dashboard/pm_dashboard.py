@@ -112,6 +112,11 @@ def serve_static(filename):
     return send_from_directory(path, filename)
 
 # host API
+@__app__.route(f'{__api_prefix__}/get-version')
+@cross_origin()
+def get_version():
+    return {"status": True, "data": __device_info__['version']}
+
 @__app__.route(f'{__api_prefix__}/get-device-info')
 @cross_origin()
 def get_device_info():
@@ -222,13 +227,18 @@ def get_log():
     content = _get_log(filename, lines, filter, level)
     return {"status": True, "data": content}
 
-@__app__.route(f'{__api_prefix__}/set-config', methods=['POST'])
+@__app__.route(f'{__api_prefix__}/get-default-on')
 @cross_origin()
-def set_config():
+def get_default_on():
+    default_on = __db__.get("history", "default_on")
+    return {"status": True, "data": default_on}
+
+@__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
+@cross_origin()
+def set_shutdown_percentage():
     data = request.json['data']
     __on_config_changed__(data)
-    return {"status": True, "data": __config__}
-
+    return {"status": True, "data": "OK"}
 
 class PMDashboard(threading.Thread):
     @log_error
