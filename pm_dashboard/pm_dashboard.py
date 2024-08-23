@@ -93,6 +93,11 @@ def get_log_level(line):
             return level
     return 'INFO'
 
+def updata_config():
+    data = request.json['data']
+    __on_config_changed__(data)
+    return {"status": True, "data": "OK"}
+
 # Host dashboard page
 @__app__.route('/')
 @cross_origin()
@@ -236,9 +241,32 @@ def get_default_on():
 @__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
 @cross_origin()
 def set_shutdown_percentage():
-    data = request.json['data']
-    __on_config_changed__(data)
-    return {"status": True, "data": "OK"}
+    updata_config()
+
+@__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
+@cross_origin()
+def set_rgb_brightness():
+    updata_config()
+
+@__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
+@cross_origin()
+def set_default_on():
+    updata_config()
+
+@__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
+@cross_origin()
+def set_default_on():
+    updata_config()
+
+@__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
+@cross_origin()
+def set_default_on():
+    updata_config()
+
+@__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
+@cross_origin()
+def set_default_on():
+    updata_config()
 
 class PMDashboard(threading.Thread):
     @log_error
