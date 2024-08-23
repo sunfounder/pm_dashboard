@@ -122,7 +122,7 @@ class Database:
             if key != "*" and key != "time" and "," not in key:
                 result = result[key]
         self.log.debug(f"Got data from database: {result}")
-        return list(result.get_points())
+        return result
 
     def close(self):
         self.client.close()
