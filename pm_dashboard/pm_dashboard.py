@@ -250,22 +250,22 @@ def set_rgb_brightness():
 
 @__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
 @cross_origin()
-def set_default_on():
+def set_rgb_color():
     updata_config()
 
 @__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
 @cross_origin()
-def set_default_on():
+def set_rgb_enable():
     updata_config()
 
 @__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
 @cross_origin()
-def set_default_on():
+def set_rgb_led_count():
     updata_config()
 
 @__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
 @cross_origin()
-def set_default_on():
+def set_rgb_style():
     updata_config()
 
 class PMDashboard(threading.Thread):
