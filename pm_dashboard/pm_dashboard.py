@@ -94,7 +94,7 @@ def get_log_level(line):
     return 'INFO'
 
 def updata_config():
-    data = request.json['data']
+    data = request
     __on_config_changed__(data)
     return {"status": True, "data": "OK"}
 
