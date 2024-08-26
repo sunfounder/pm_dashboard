@@ -295,8 +295,10 @@ class PMDashboard(threading.Thread):
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
         __app__.logger.handlers = []
+        __app__.logger.propagate = False
         for handler in self.log.handlers:
             __app__.logger.addHandler(handler)
+        __app__.logger.setLevel(logging.DEBUG)
 
         self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
         __db__ = Database(settings['database'], get_logger=get_logger)
