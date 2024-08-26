@@ -93,11 +93,6 @@ def get_log_level(line):
             return level
     return 'INFO'
 
-def updata_config():
-    data = request
-    __on_config_changed__(data)
-    return {"status": True, "data": "OK"}
-
 # Host dashboard page
 @__app__.route('/')
 @cross_origin()
@@ -241,32 +236,44 @@ def get_default_on():
 @__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
 @cross_origin()
 def set_shutdown_percentage():
-    return updata_config()
+    percentage = request.json["shutdown-percentage"]
+    __on_config_changed__({'auto': {'shutdown_percentage': percentage}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
 @cross_origin()
 def set_rgb_brightness():
-    return updata_config()
+    brightness = request.json["brightness"]
+    __on_config_changed__({'auto': {'rgb_brightness': brightness}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
 @cross_origin()
 def set_rgb_color():
-    return updata_config()
+    color = request.json["color"]
+    __on_config_changed__({'auto': {'rgb_color': color}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
 @cross_origin()
 def set_rgb_enable():
-    return updata_config()
+    enable = request.json["enable"]
+    __on_config_changed__({'auto': {'rgb_enable': enable}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
 @cross_origin()
 def set_rgb_led_count():
-    return updata_config()
+    led_count = request.json["led-count"]
+    __on_config_changed__({'auto': {'rgb_led_count': led_count}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
 @cross_origin()
 def set_rgb_style():
-    return updata_config()
+    style = request.json["style"]
+    __on_config_changed__({'auto': {'rgb_style': style}})
+    return {"status": True, "data": "OK"}
 
 class PMDashboard(threading.Thread):
     @log_error
