@@ -275,6 +275,13 @@ def set_rgb_style():
     __on_config_changed__({'auto': {'rgb_style': style}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-rgb-speed', methods=['POST'])
+@cross_origin()
+def set_rgb_speed():
+    speed = request.json["speed"]
+    __on_config_changed__({'auto': {'rgb_speed': speed}})
+    return {"status": True, "data": "OK"}
+
 class PMDashboard(threading.Thread):
     @log_error
     def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
@@ -288,8 +295,8 @@ class PMDashboard(threading.Thread):
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
         __app__.logger.handlers = []
-        for handler in __app__.logger.handlers:
-            self.log.addHandler(handler)
+        for handler in self.log.handlers:
+            __app__.logger.addHandler(handler)
 
         self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
         __db__ = Database(settings['database'], get_logger=get_logger)
