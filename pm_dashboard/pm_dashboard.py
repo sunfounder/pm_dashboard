@@ -1,7 +1,7 @@
 
 import threading
 import logging
-from os import listdir
+from os import listdir, path
 
 import flask
 from flask import request, send_from_directory
@@ -12,6 +12,8 @@ from werkzeug.serving import make_server
 from .data_logger import DataLogger
 from .database import Database
 from .utils import log_error
+
+from sf_rpi_status import get_disks, get_ips
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
@@ -45,6 +47,8 @@ def on_mqtt_connected(client, userdata, flags, rc):
         __mqtt_connected__ = False
 
 def _get_log(name, line_count=100, filter=[], level="INFO"):
+    if path.exists(f"{__log_path__}/{name}") == False:
+        return False
     with open(f"{__log_path__}/{name}", 'r') as f:
         lines = f.readlines()
         lines = lines[-line_count:]
@@ -225,6 +229,8 @@ def get_log():
         if level not in DEBUG_LEVELS:
             return {"status": False, "error": f"[ERROR] level {level} not found"}
     content = _get_log(filename, lines, filter, level)
+    if content is False:
+        return {"status": False, "error": f"[ERROR] file {filename} not found"}
     return {"status": True, "data": content}
 
 @__app__.route(f'{__api_prefix__}/get-default-on')
@@ -232,6 +238,17 @@ def get_log():
 def get_default_on():
     default_on = __db__.get("history", "default_on")
     return {"status": True, "data": default_on}
+
+@__app__.route(f'{__api_prefix__}/get-disk-list')
+@cross_origin()
+def get_disk_list():
+    return {"status": True, "data": get_disks()}
+
+@__app__.route(f'{__api_prefix__}/get-network-interface-list')
+@cross_origin()
+def get_network_interface_list():
+    interfaces = get_ips().keys()
+    return {"status": True, "data": interfaces}
 
 @__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
 @cross_origin()
@@ -280,6 +297,34 @@ def set_rgb_style():
 def set_rgb_speed():
     speed = request.json["speed"]
     __on_config_changed__({'system': {'rgb_speed': speed}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-oled-disk', methods=['POST'])
+@cross_origin()
+def set_oled_disk():
+    disk = request.json["disk"]
+    disks = ["total"]
+    disks.extend(get_disks())
+
+    if disk is None:
+        disk = "total"
+    elif disk not in disks:
+        return {"status": False, "error": f"[ERROR] disk {disk} not found, available disks: {disks}"}
+    __on_config_changed__({'system': {'oled_disk': disk}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-oled-network-interface', methods=['POST'])
+@cross_origin()
+def set_oled_network_interface():
+    interface = request.json["interface"]
+    interfaces = ['all']
+    interfaces.extend(get_ips().keys())
+
+    if interface is None:
+        interface = "eth0"
+    elif interface not in interfaces:
+        return {"status": False, "error": f"[ERROR] interface {interface} not found, available interfaces: {interfaces}"}
+    __on_config_changed__({'system': {'oled_network_interface': interface}})
     return {"status": True, "data": "OK"}
 
 class PMDashboard(threading.Thread):
