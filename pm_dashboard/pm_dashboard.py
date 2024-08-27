@@ -237,49 +237,49 @@ def get_default_on():
 @cross_origin()
 def set_shutdown_percentage():
     percentage = request.json["shutdown-percentage"]
-    __on_config_changed__({'auto': {'shutdown_percentage': percentage}})
+    __on_config_changed__({'system': {'shutdown_percentage': percentage}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
 @cross_origin()
 def set_rgb_brightness():
     brightness = request.json["brightness"]
-    __on_config_changed__({'auto': {'rgb_brightness': brightness}})
+    __on_config_changed__({'system': {'rgb_brightness': brightness}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
 @cross_origin()
 def set_rgb_color():
     color = request.json["color"]
-    __on_config_changed__({'auto': {'rgb_color': color}})
+    __on_config_changed__({'system': {'rgb_color': color}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
 @cross_origin()
 def set_rgb_enable():
     enable = request.json["enable"]
-    __on_config_changed__({'auto': {'rgb_enable': enable}})
+    __on_config_changed__({'system': {'rgb_enable': enable}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
 @cross_origin()
 def set_rgb_led_count():
     led_count = request.json["led-count"]
-    __on_config_changed__({'auto': {'rgb_led_count': led_count}})
+    __on_config_changed__({'system': {'rgb_led_count': led_count}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
 @cross_origin()
 def set_rgb_style():
     style = request.json["style"]
-    __on_config_changed__({'auto': {'rgb_style': style}})
+    __on_config_changed__({'system': {'rgb_style': style}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-speed', methods=['POST'])
 @cross_origin()
 def set_rgb_speed():
     speed = request.json["speed"]
-    __on_config_changed__({'auto': {'rgb_speed': speed}})
+    __on_config_changed__({'system': {'rgb_speed': speed}})
     return {"status": True, "data": "OK"}
 
 class PMDashboard(threading.Thread):
