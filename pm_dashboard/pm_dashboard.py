@@ -373,6 +373,13 @@ class PMDashboard(threading.Thread):
         self.started = False
 
     @log_error
+    def set_debug_level(self, level):
+        __app__.logger.setLevel(level)
+        __db__.set_debug_level(level)
+        self.data_logger.set_debug_level(level)
+        self.log.setLevel(level)
+
+    @log_error
     def update_status(self, status):
         self.data_logger.update_status(status)
 

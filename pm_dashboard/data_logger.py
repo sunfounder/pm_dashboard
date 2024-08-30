@@ -59,6 +59,10 @@ class DataLogger:
         self.status = {}
 
     @log_error
+    def set_debug_level(self, level):
+        self.log.setLevel(level)
+
+    @log_error
     def update_status(self, status):
         self.status = status
 

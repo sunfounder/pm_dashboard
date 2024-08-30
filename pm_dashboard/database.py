@@ -14,6 +14,9 @@ class Database:
 
         self.client = InfluxDBClient(host='localhost', port=8086)
     
+    def set_debug_level(self, level):
+        self.log.setLevel(level)
+
     def start(self):
         if not Database.is_influxdb_running():
             self.log.info("Starting influxdb service")
