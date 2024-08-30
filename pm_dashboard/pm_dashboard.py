@@ -250,12 +250,32 @@ def get_network_interface_list():
     interfaces = get_ips().keys()
     return {"status": True, "data": interfaces}
 
+@__app__.route(f'{__api_prefix__}/set-temperature-unit', methods=['POST'])
+@cross_origin()
+def set_temperature_unit():
+    unit = request.json["unit"]
+    unit = unit.upper()
+    if unit not in ['C', 'F']:
+        return {"status": False, "error": f"[ERROR] temperature unit {unit} not found, available units: C, F"}
+    __on_config_changed__({'system': {'temperature_unit': unit}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
 @cross_origin()
 def set_shutdown_percentage():
     percentage = request.json["shutdown-percentage"]
     __on_config_changed__({'system': {'shutdown_percentage': percentage}})
     return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-fan-mode', methods=['POST'])
+@cross_origin()
+def set_fan_mode():
+    mode = request.json["mode"]
+    if not isinstance(mode, int):
+        return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
+    if mode < 0 or mode > 4:
+        return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
+    __on_config_changed__({'system': {'fan_mode': mode}})
 
 @__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
 @cross_origin()
