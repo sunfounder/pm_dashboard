@@ -270,12 +270,13 @@ def set_shutdown_percentage():
 @__app__.route(f'{__api_prefix__}/set-fan-mode', methods=['POST'])
 @cross_origin()
 def set_fan_mode():
-    mode = request.json["mode"]
+    mode = request.json["fan_mode"]
     if not isinstance(mode, int):
         return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
     if mode < 0 or mode > 4:
         return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
-    __on_config_changed__({'system': {'fan_mode': mode}})
+    __on_config_changed__({'system': {'gpio_fan_mode': mode}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
 @cross_origin()
