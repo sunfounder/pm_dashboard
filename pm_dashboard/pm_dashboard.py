@@ -23,6 +23,7 @@ __www_path__ = resource_filename(__package_name__, 'www')
 __api_prefix__ = '/api/v1.0'
 __host__ = '0.0.0.0'
 __port__ = 34001
+__log__ = None
 
 __default_settings__ = {
     "database": "pm_dashboard",
@@ -247,7 +248,7 @@ def get_disk_list():
 @__app__.route(f'{__api_prefix__}/get-network-interface-list')
 @cross_origin()
 def get_network_interface_list():
-    interfaces = get_ips().keys()
+    interfaces = list(get_ips().keys())
     return {"status": True, "data": interfaces}
 
 @__app__.route(f'{__api_prefix__}/set-temperature-unit', methods=['POST'])
@@ -265,6 +266,15 @@ def set_temperature_unit():
 def set_shutdown_percentage():
     percentage = request.json["shutdown-percentage"]
     __on_config_changed__({'system': {'shutdown_percentage': percentage}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-fan-led', methods=['POST'])
+@cross_origin()
+def set_fan_led():
+    led = request.json["led"]
+    if led not in ['on', 'off', 'follow']:
+        return {"status": False, "error": f"[ERROR] led {led} not found, available values: on, off or follow"}
+    __on_config_changed__({'system': {'gpio_fan_led': led}})
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-fan-mode', methods=['POST'])
@@ -320,6 +330,15 @@ def set_rgb_speed():
     __on_config_changed__({'system': {'rgb_speed': speed}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-oled-enable', methods=['POST'])
+@cross_origin()
+def set_oled_enable():
+    enable = request.json["enable"]
+    if not isinstance(enable, bool):
+        return {"status": False, "error": f"[ERROR] enable {enable} not found, available values: True or False"}
+    __on_config_changed__({'system': {'oled_enable': enable}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/set-oled-disk', methods=['POST'])
 @cross_origin()
 def set_oled_disk():
@@ -351,7 +370,7 @@ def set_oled_network_interface():
 class PMDashboard(threading.Thread):
     @log_error
     def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log_path__
+        global __config__, __device_info__, __db__, __log_path__, __log__
         __device_info__ = device_info
         __log_path__ = f'/var/log/{device_info["id"]}'
 
@@ -360,6 +379,7 @@ class PMDashboard(threading.Thread):
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
+        __log__ = self.log
         __app__.logger.handlers = []
         __app__.logger.propagate = False
         for handler in self.log.handlers:
