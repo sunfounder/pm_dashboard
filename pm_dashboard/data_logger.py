@@ -95,15 +95,7 @@ class DataLogger:
             data['memory_percent'] = memory.percent
             data['memory_used'] = memory.used
 
-            # disk = get_disk_info()
-            # data['disk_total'] = disk.total
-            # data['disk_used'] = disk.used
-            # data['disk_free'] = disk.free
-            # data['disk_percent'] = disk.percent
-
             disks = get_disks_info()
-            print("AAASSASASASAS")
-            print(disks)
             for disk_name in disks:
                 disk = disks[disk_name]
                 data[f'disk_{disk_name}_monted'] = disk.mounted
