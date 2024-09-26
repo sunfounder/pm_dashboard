@@ -4,6 +4,8 @@ import json
 import logging
 import subprocess
 import time
+from math import floor
+from datetime import datetime, timedelta
 
 class Database:
     def __init__(self, database, get_logger=None):
@@ -15,6 +17,7 @@ class Database:
         self.client = InfluxDBClient(host='localhost', port=8086)
     
     def set_debug_level(self, level):
+        self.log.info(f"Setting debug level to {level}")
         self.log.setLevel(level)
 
     def start(self):
@@ -57,17 +60,16 @@ class Database:
         except subprocess.CalledProcessError:
             return False
 
-    @staticmethod
-    def start_influxdb():
+    def start_influxdb(self):
         # Start InfluxDB in the background
         subprocess.Popen(["influxd"])
+        self.influx_manually_started = True
 
-    @staticmethod
-    def stop_influxdb():
+    def stop_influxdb(self):
         subprocess.Popen(["pkill", "influxd"])
 
     def set(self, measurement, data):
-        self.log.debug(f"Setting data to database: measurement={measurement}, data={data}")
+        # self.log.debug(f"Setting data to database: measurement={measurement}, data={data}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
@@ -85,12 +87,26 @@ class Database:
         except Exception as e:
             return False, str(e)
 
-    def get_data_by_time_range(self, measurement, start_time, end_time, key="*"):
-        self.log.debug(f"Getting data from database: measurement={measurement}, key={key}, start_time={start_time}, end_time={end_time}")
+    def get_data_by_time_range(self, measurement, start_time, end_time, keys="*", function="mean", max_size=300):
+        self.log.debug(f"Getting data from database: measurement={measurement}, keys={keys}, start_time={start_time}, end_time={end_time}, function={function}, max_size={max_size}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
-        query = f"SELECT {key} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time}"
+        if function not in ["mean", "sum", "min", "max", "count"]:
+            self.log.error(f"Invalid function: {function}")
+            return []
+        if "," in keys:
+            newKeys = []
+            for k in keys.split(","):
+                newKeys.append(f"{function}({k}) as {k}")
+            keys = ",".join(newKeys)
+        duration = int(end_time) - int(start_time)
+        duration_in_seconds = duration / 1000000000
+        interval = 1
+        if duration_in_seconds > max_size:
+            interval = duration_in_seconds / max_size
+            interval = floor(interval)
+        query = f'SELECT {keys} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time} GROUP BY time({interval}s)'
         result = self.client.query(query)
         return list(result.get_points())
 
@@ -127,7 +143,17 @@ class Database:
         self.log.debug(f"Got data from database: {result}")
         return result
 
+    def clear_database(self):
+        self.log.debug(f"Clearing database: {self.database}")
+        if not self.is_ready():
+            self.log.error('Database is not ready')
+            return False
+        self.client.drop_database(self.database)
+        self.log.info(f"Database '{self.database}' cleared successfully")
+        return True
+
     def close(self):
         self.client.close()
-        Database.stop_influxdb()
+        if self.influx_manually_started:
+            self.stop_influxdb()
 
