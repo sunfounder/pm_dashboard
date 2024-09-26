@@ -1,7 +1,7 @@
 
 import threading
 import logging
-from os import listdir, path
+from os import listdir, path, remove
 
 import flask
 from flask import request, send_from_directory
@@ -366,6 +366,26 @@ def set_oled_network_interface():
         return {"status": False, "error": f"[ERROR] interface {interface} not found, available interfaces: {interfaces}"}
     __on_config_changed__({'system': {'oled_network_interface': interface}})
     return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/clear-history', methods=['POST'])
+@cross_origin()
+def clear_history():
+    __db__.clear_database()
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/delete-log-file', methods=['POST'])
+@cross_origin()
+def delete_log_file():
+    filename = request.json["filename"]
+    if filename is None:
+        return {"status": False, "error": "[ERROR] file not found"}
+    if path.exists(f"{__log_path__}/{filename}") == False:
+        return {"status": False, "error": f"[ERROR] file {filename} not found"}
+    try:
+        remove(f"{__log_path__}/{filename}")
+        return {"status": True, "data": "OK"}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
 
 class PMDashboard(threading.Thread):
     @log_error
