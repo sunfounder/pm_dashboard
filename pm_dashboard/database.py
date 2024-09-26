@@ -88,7 +88,7 @@ class Database:
             return False, str(e)
 
     def get_data_by_time_range(self, measurement, start_time, end_time, keys="*", function="mean", max_size=300):
-        self.log.debug(f"Getting data from database: measurement={measurement}, keys={keys}, start_time={start_time}, end_time={end_time}, function={function}, max_size={max_size}")
+        # self.log.debug(f"Getting data from database: measurement={measurement}, keys={keys}, start_time={start_time}, end_time={end_time}, function={function}, max_size={max_size}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
@@ -119,7 +119,7 @@ class Database:
         return False
 
     def get(self, measurement, key="*", n=1):
-        self.log.debug(f"Getting data from database: measurement={measurement}, key={key}, n={n}")
+        # self.log.debug(f"Getting data from database: measurement={measurement}, key={key}, n={n}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
