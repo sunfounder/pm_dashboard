@@ -367,10 +367,10 @@ def set_oled_network_interface():
     __on_config_changed__({'system': {'oled_network_interface': interface}})
     return {"status": True, "data": "OK"}
 
-@__app__.route(f'{__api_prefix__}/clear-history', methods=['POST'])
+@__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
 def clear_history():
-    __db__.clear_database()
+    __db__.clear_measurement('history')
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/delete-log-file', methods=['POST'])

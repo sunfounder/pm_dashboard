@@ -143,12 +143,12 @@ class Database:
         self.log.debug(f"Got data from database: {result}")
         return result
 
-    def clear_database(self):
-        self.log.debug(f"Clearing database: {self.database}")
+    def clear_measurement(self, measurement):
+        self.log.warning(f"Clearing database: {self.database}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return False
-        self.client.drop_database(self.database)
+        self.client.drop_measurement(measurement)
         self.log.info(f"Database '{self.database}' cleared successfully")
         return True
 
