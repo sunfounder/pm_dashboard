@@ -88,14 +88,14 @@ class Database:
             return False, str(e)
 
     def get_data_by_time_range(self, measurement, start_time, end_time, keys="*", function="mean", max_size=300):
-        # self.log.debug(f"Getting data from database: measurement={measurement}, keys={keys}, start_time={start_time}, end_time={end_time}, function={function}, max_size={max_size}")
+        # self.log.warning(f"Getting data from database: measurement={measurement}, keys={keys}, start_time={start_time}, end_time={end_time}, function={function}, max_size={max_size}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
         if function not in ["mean", "sum", "min", "max", "count"]:
             self.log.error(f"Invalid function: {function}")
             return []
-        if "," in keys:
+        if keys != "*":
             newKeys = []
             for k in keys.split(","):
                 newKeys.append(f"{function}({k}) as {k}")
@@ -107,6 +107,7 @@ class Database:
             interval = duration_in_seconds / max_size
             interval = floor(interval)
         query = f'SELECT {keys} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time} GROUP BY time({interval}s)'
+        self.log.warning(f"Query: {query}")
         result = self.client.query(query)
         return list(result.get_points())
 
