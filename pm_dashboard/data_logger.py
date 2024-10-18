@@ -131,8 +131,11 @@ class DataLogger:
                 if isinstance(value, bool):
                     data[key] = int(value)
 
-            self.db.set('history', data)
-            self.log.debug(f"Set data: {data}")
+            status, msg = self.db.set('history', data)
+            if not status:
+                self.log.error(f"Failed to set data: {msg}")
+            else:
+                self.log.debug(f"Set data: {data}")
 
             time.sleep(self.interval)
 
