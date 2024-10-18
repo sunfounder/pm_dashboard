@@ -13,6 +13,7 @@ class Database:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
         self.database = database
+        self.influx_manually_started = False
 
         self.client = InfluxDBClient(host='localhost', port=8086)
     
