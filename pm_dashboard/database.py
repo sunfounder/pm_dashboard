@@ -23,7 +23,7 @@ class Database:
     def start(self):
         if not Database.is_influxdb_running():
             self.log.info("Starting influxdb service")
-            Database.start_influxdb()
+            self.start_influxdb()
             # Wait 2 seconds for InfluxDB to start
             time.sleep(2)
 
