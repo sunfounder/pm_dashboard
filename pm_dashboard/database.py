@@ -47,6 +47,12 @@ class Database:
         self.client.switch_database(self.database)
 
     def is_ready(self):
+        ports = Database.get_influxdb_ports()
+        if len(ports) == 0:
+            self.log.error("Influxdb process error, no ports found")
+            return False
+        if len(ports) == 1:
+            self.log.info(f"Influxdb process error, only running on port {ports[0]}")
         try:
             return self.client.ping()
         except Exception as e:
@@ -60,6 +66,18 @@ class Database:
             return True
         except subprocess.CalledProcessError:
             return False
+
+    @staticmethod
+    def get_influxdb_ports():
+        command = "sudo lsof -i -P -n | grep LISTEN | grep influxd | awk '{print $9}' | cut -d ':' -f 2"
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, _ = process.communicate()
+        output = output.decode('utf-8').strip()
+        if output == '':
+            return 0
+        ports = output.split('\n')
+        ports = [int(port) for port in ports]
+        return ports
 
     def start_influxdb(self):
         # Start InfluxDB in the background
