@@ -12,13 +12,10 @@ Pironman Dashboard is a simple server that provides a REST API and host a web pa
 
 ```bash
 # Install development dependencies
-apt-get -y install python3 python3-pip python3-venv git wget unzip influxdb
+apt-get -y install python3 python3-pip python3-venv git influxdb
 
 # Create a virtual environment
 python3 -m venv venv
-
-# Install build
-pip3 install build
 
 # Clone the repository
 git clone https://github.com/sunfounder/pm_dashboard.git
@@ -26,11 +23,8 @@ git clone https://github.com/sunfounder/pm_dashboard.git
 # Activate the virtual environment
 source venv/bin/activate
 
-# Build the package
-python3 -m build
-
 # Install the package
-pip3 install dist/*.whl
+pip3 install .
 ```
 
 ## WWW

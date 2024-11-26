@@ -49,11 +49,18 @@ class DataLogger:
         self.db = Database(settings['database'], get_logger=get_logger)
         self.interval = settings['interval']
         self.peripherals = peripherals
-        if 'spc' in peripherals:
+        if 'spc' in settings and settings['spc'] is True:
+            self.log.info("SPC peripheral enabled")
             from spc.spc import SPC
             self.spc = SPC()
+        else:
+            self.log.info("SPC peripheral disabled")
         
         self.status = {}
+
+    @log_error
+    def set_debug_level(self, level):
+        self.log.setLevel(level)
 
     @log_error
     def update_status(self, status):
@@ -88,15 +95,10 @@ class DataLogger:
             data['memory_percent'] = memory.percent
             data['memory_used'] = memory.used
 
-            disk = get_disk_info()
-            data['disk_total'] = disk.total
-            data['disk_used'] = disk.used
-            data['disk_free'] = disk.free
-            data['disk_percent'] = disk.percent
-
             disks = get_disks_info()
             for disk_name in disks:
                 disk = disks[disk_name]
+                data[f'disk_{disk_name}_monted'] = disk.mounted
                 data[f'disk_{disk_name}_total'] = disk.total
                 data[f'disk_{disk_name}_used'] = disk.used
                 data[f'disk_{disk_name}_free'] = disk.free
@@ -129,8 +131,11 @@ class DataLogger:
                 if isinstance(value, bool):
                     data[key] = int(value)
 
-            self.db.set('history', data)
-            self.log.debug(f"Set data: {data}")
+            status, msg = self.db.set('history', data)
+            if not status:
+                self.log.error(f"Failed to set data: {msg}")
+            else:
+                self.log.debug(f"Set data: {data}")
 
             time.sleep(self.interval)
 

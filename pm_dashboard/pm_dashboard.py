@@ -1,7 +1,7 @@
 
 import threading
 import logging
-from os import listdir
+from os import listdir, path, remove
 
 import flask
 from flask import request, send_from_directory
@@ -13,6 +13,8 @@ from .data_logger import DataLogger
 from .database import Database
 from .utils import log_error
 
+from sf_rpi_status import get_disks, get_ips
+
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 __package_name__ = __name__.split('.')[0]
@@ -21,6 +23,7 @@ __www_path__ = resource_filename(__package_name__, 'www')
 __api_prefix__ = '/api/v1.0'
 __host__ = '0.0.0.0'
 __port__ = 34001
+__log__ = None
 
 __default_settings__ = {
     "database": "pm_dashboard",
@@ -45,6 +48,8 @@ def on_mqtt_connected(client, userdata, flags, rc):
         __mqtt_connected__ = False
 
 def _get_log(name, line_count=100, filter=[], level="INFO"):
+    if path.exists(f"{__log_path__}/{name}") == False:
+        return False
     with open(f"{__log_path__}/{name}", 'r') as f:
         lines = f.readlines()
         lines = lines[-line_count:]
@@ -112,6 +117,11 @@ def serve_static(filename):
     return send_from_directory(path, filename)
 
 # host API
+@__app__.route(f'{__api_prefix__}/get-version')
+@cross_origin()
+def get_version():
+    return {"status": True, "data": __device_info__['version']}
+
 @__app__.route(f'{__api_prefix__}/get-device-info')
 @cross_origin()
 def get_device_info():
@@ -220,20 +230,167 @@ def get_log():
         if level not in DEBUG_LEVELS:
             return {"status": False, "error": f"[ERROR] level {level} not found"}
     content = _get_log(filename, lines, filter, level)
+    if content is False:
+        return {"status": False, "error": f"[ERROR] file {filename} not found"}
     return {"status": True, "data": content}
 
-@__app__.route(f'{__api_prefix__}/set-config', methods=['POST'])
+@__app__.route(f'{__api_prefix__}/get-default-on')
 @cross_origin()
-def set_config():
-    data = request.json['data']
-    __on_config_changed__(data)
-    return {"status": True, "data": __config__}
+def get_default_on():
+    default_on = __db__.get("history", "default_on")
+    return {"status": True, "data": default_on}
 
+@__app__.route(f'{__api_prefix__}/get-disk-list')
+@cross_origin()
+def get_disk_list():
+    return {"status": True, "data": get_disks()}
+
+@__app__.route(f'{__api_prefix__}/get-network-interface-list')
+@cross_origin()
+def get_network_interface_list():
+    interfaces = list(get_ips().keys())
+    return {"status": True, "data": interfaces}
+
+@__app__.route(f'{__api_prefix__}/set-temperature-unit', methods=['POST'])
+@cross_origin()
+def set_temperature_unit():
+    unit = request.json["unit"]
+    unit = unit.upper()
+    if unit not in ['C', 'F']:
+        return {"status": False, "error": f"[ERROR] temperature unit {unit} not found, available units: C, F"}
+    __on_config_changed__({'system': {'temperature_unit': unit}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-shutdown-percentage', methods=['POST'])
+@cross_origin()
+def set_shutdown_percentage():
+    percentage = request.json["shutdown-percentage"]
+    __on_config_changed__({'system': {'shutdown_percentage': percentage}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-fan-led', methods=['POST'])
+@cross_origin()
+def set_fan_led():
+    led = request.json["led"]
+    if led not in ['on', 'off', 'follow']:
+        return {"status": False, "error": f"[ERROR] led {led} not found, available values: on, off or follow"}
+    __on_config_changed__({'system': {'gpio_fan_led': led}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-fan-mode', methods=['POST'])
+@cross_origin()
+def set_fan_mode():
+    mode = request.json["fan_mode"]
+    if not isinstance(mode, int):
+        return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
+    if mode < 0 or mode > 4:
+        return {"status": False, "error": f"[ERROR] fan mode {mode} not found, available modes: 0, 1, 2, 3, 4, for Alway On, Performance, Cool, Balance, or Silent"}
+    __on_config_changed__({'system': {'gpio_fan_mode': mode}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-brightness', methods=['POST'])
+@cross_origin()
+def set_rgb_brightness():
+    brightness = request.json["brightness"]
+    __on_config_changed__({'system': {'rgb_brightness': brightness}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-color', methods=['POST'])
+@cross_origin()
+def set_rgb_color():
+    color = request.json["color"]
+    __on_config_changed__({'system': {'rgb_color': color}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-enable', methods=['POST'])
+@cross_origin()
+def set_rgb_enable():
+    enable = request.json["enable"]
+    __on_config_changed__({'system': {'rgb_enable': enable}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-led-count', methods=['POST'])
+@cross_origin()
+def set_rgb_led_count():
+    led_count = request.json["led-count"]
+    __on_config_changed__({'system': {'rgb_led_count': led_count}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-style', methods=['POST'])
+@cross_origin()
+def set_rgb_style():
+    style = request.json["style"]
+    __on_config_changed__({'system': {'rgb_style': style}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-speed', methods=['POST'])
+@cross_origin()
+def set_rgb_speed():
+    speed = request.json["speed"]
+    __on_config_changed__({'system': {'rgb_speed': speed}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-oled-enable', methods=['POST'])
+@cross_origin()
+def set_oled_enable():
+    enable = request.json["enable"]
+    if not isinstance(enable, bool):
+        return {"status": False, "error": f"[ERROR] enable {enable} not found, available values: True or False"}
+    __on_config_changed__({'system': {'oled_enable': enable}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-oled-disk', methods=['POST'])
+@cross_origin()
+def set_oled_disk():
+    disk = request.json["disk"]
+    disks = ["total"]
+    disks.extend(get_disks())
+
+    if disk is None:
+        disk = "total"
+    elif disk not in disks:
+        return {"status": False, "error": f"[ERROR] disk {disk} not found, available disks: {disks}"}
+    __on_config_changed__({'system': {'oled_disk': disk}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-oled-network-interface', methods=['POST'])
+@cross_origin()
+def set_oled_network_interface():
+    interface = request.json["interface"]
+    interfaces = ['all']
+    interfaces.extend(get_ips().keys())
+
+    if interface is None:
+        interface = "eth0"
+    elif interface not in interfaces:
+        return {"status": False, "error": f"[ERROR] interface {interface} not found, available interfaces: {interfaces}"}
+    __on_config_changed__({'system': {'oled_network_interface': interface}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
+@cross_origin()
+def clear_history():
+    __db__.clear_measurement('history')
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/delete-log-file', methods=['POST'])
+@cross_origin()
+def delete_log_file():
+    filename = request.json["filename"]
+    if filename is None:
+        return {"status": False, "error": "[ERROR] file not found"}
+    if path.exists(f"{__log_path__}/{filename}") == False:
+        return {"status": False, "error": f"[ERROR] file {filename} not found"}
+    try:
+        remove(f"{__log_path__}/{filename}")
+        return {"status": True, "data": "OK"}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
 
 class PMDashboard(threading.Thread):
     @log_error
     def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log_path__
+        global __config__, __device_info__, __db__, __log_path__, __log__
         __device_info__ = device_info
         __log_path__ = f'/var/log/{device_info["id"]}'
 
@@ -242,9 +399,12 @@ class PMDashboard(threading.Thread):
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
+        __log__ = self.log
         __app__.logger.handlers = []
-        for handler in __app__.logger.handlers:
-            self.log.addHandler(handler)
+        __app__.logger.propagate = False
+        for handler in self.log.handlers:
+            __app__.logger.addHandler(handler)
+        __app__.logger.setLevel(logging.DEBUG)
 
         self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
         __db__ = Database(settings['database'], get_logger=get_logger)
@@ -252,6 +412,13 @@ class PMDashboard(threading.Thread):
             __config__[key] = value
 
         self.started = False
+
+    @log_error
+    def set_debug_level(self, level):
+        __app__.logger.setLevel(level)
+        __db__.set_debug_level(level)
+        self.data_logger.set_debug_level(level)
+        self.log.setLevel(level)
 
     @log_error
     def update_status(self, status):
