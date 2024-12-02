@@ -74,7 +74,7 @@ class Database:
         output, _ = process.communicate()
         output = output.decode('utf-8').strip()
         if output == '':
-            return 0
+            return []
         ports = output.split('\n')
         ports = [int(port) for port in ports]
         return ports
