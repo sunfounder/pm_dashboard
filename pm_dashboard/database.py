@@ -69,7 +69,7 @@ class Database:
 
     @staticmethod
     def get_influxdb_ports():
-        command = "sudo lsof -i -P -n | grep LISTEN | grep influxd | awk '{print $9}' | cut -d ':' -f 2"
+        command = "lsof -i -P -n | grep LISTEN | grep influxd | awk '{print $9}' | cut -d ':' -f 2"
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, _ = process.communicate()
         output = output.decode('utf-8').strip()
