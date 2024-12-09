@@ -15,7 +15,7 @@ classifiers = [
   "License :: OSI Approved :: GNU License",
   "Operating System :: OS Independent",
 ]
-version = "1.1.4"
+dynamic = ["version"]
 
 dependencies = [
   "flask",
@@ -34,3 +34,6 @@ packages = ["pm_dashboard"]
 
 [project.scripts]
 pm_dashboard = "pm_dashboard:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "pm_dashboard.__version__"}
