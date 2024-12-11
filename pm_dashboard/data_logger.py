@@ -76,8 +76,8 @@ class DataLogger:
             network_speed = get_network_speed()
 
             data = {}
-            data['cpu_temperature'] = get_cpu_temperature()
-            data['cpu_percent'] = get_cpu_percent()
+            data['cpu_temperature'] = float(get_cpu_temperature())
+            data['cpu_percent'] = float(get_cpu_percent())
             data['cpu_count'] = get_cpu_count()
 
             cpu_freq = get_cpu_freq()
@@ -87,22 +87,22 @@ class DataLogger:
 
             cpu_percents = get_cpu_percent(percpu=True)
             for i, percent in enumerate(cpu_percents):
-                data[f'cpu_{i}_percent'] = percent
+                data[f'cpu_{i}_percent'] = float(percent)
 
             memory = get_memory_info()
-            data['memory_total'] = memory.total
-            data['memory_available'] = memory.available
-            data['memory_percent'] = memory.percent
-            data['memory_used'] = memory.used
+            data['memory_total'] = float(memory.total)
+            data['memory_available'] = float(memory.available)
+            data['memory_percent'] = float(memory.percent)
+            data['memory_used'] = float(memory.used)
 
             disks = get_disks_info()
             for disk_name in disks:
                 disk = disks[disk_name]
-                data[f'disk_{disk_name}_monted'] = disk.mounted
-                data[f'disk_{disk_name}_total'] = disk.total
-                data[f'disk_{disk_name}_used'] = disk.used
-                data[f'disk_{disk_name}_free'] = disk.free
-                data[f'disk_{disk_name}_percent'] = disk.percent
+                data[f'disk_{disk_name}_monted'] = float(disk.mounted)
+                data[f'disk_{disk_name}_total'] = float(disk.total)
+                data[f'disk_{disk_name}_used'] = float(disk.used)
+                data[f'disk_{disk_name}_free'] = float(disk.free)
+                data[f'disk_{disk_name}_percent'] = float(disk.percent)
 
             data['boot_time'] = boot_time
 
@@ -115,8 +115,8 @@ class DataLogger:
                 data[f'mac_{name}'] = macs[name]
 
             data['network_type'] = "&".join(network_connection_type)
-            data['network_upload_speed'] = network_speed.upload
-            data['network_download_speed'] = network_speed.download
+            data['network_upload_speed'] = float(network_speed.upload)
+            data['network_download_speed'] = float(network_speed.download)
 
             for name in self.status:
                 data[name] = self.status[name]
