@@ -78,33 +78,33 @@ class DataLogger:
             data = {}
             data['cpu_temperature'] = float(get_cpu_temperature())
             data['cpu_percent'] = float(get_cpu_percent())
-            data['cpu_count'] = get_cpu_count()
+            data['cpu_count'] = int(get_cpu_count())
 
             cpu_freq = get_cpu_freq()
-            data['cpu_freq'] = cpu_freq.current
-            data['cpu_freq_min'] = cpu_freq.min
-            data['cpu_freq_max'] = cpu_freq.max
+            data['cpu_freq'] = float(cpu_freq.current)
+            data['cpu_freq_min'] = float(cpu_freq.min)
+            data['cpu_freq_max'] = float(cpu_freq.max)
 
             cpu_percents = get_cpu_percent(percpu=True)
             for i, percent in enumerate(cpu_percents):
                 data[f'cpu_{i}_percent'] = float(percent)
 
             memory = get_memory_info()
-            data['memory_total'] = float(memory.total)
-            data['memory_available'] = float(memory.available)
+            data['memory_total'] = int(memory.total)
+            data['memory_available'] = int(memory.available)
             data['memory_percent'] = float(memory.percent)
-            data['memory_used'] = float(memory.used)
+            data['memory_used'] = int(memory.used)
 
             disks = get_disks_info()
             for disk_name in disks:
                 disk = disks[disk_name]
-                data[f'disk_{disk_name}_monted'] = float(disk.mounted)
-                data[f'disk_{disk_name}_total'] = float(disk.total)
-                data[f'disk_{disk_name}_used'] = float(disk.used)
-                data[f'disk_{disk_name}_free'] = float(disk.free)
+                data[f'disk_{disk_name}_monted'] = int(disk.mounted)
+                data[f'disk_{disk_name}_total'] = int(disk.total)
+                data[f'disk_{disk_name}_used'] = int(disk.used)
+                data[f'disk_{disk_name}_free'] = int(disk.free)
                 data[f'disk_{disk_name}_percent'] = float(disk.percent)
 
-            data['boot_time'] = boot_time
+            data['boot_time'] = float(boot_time)
 
             ips = get_ips()
             for name in ips:
@@ -115,8 +115,8 @@ class DataLogger:
                 data[f'mac_{name}'] = macs[name]
 
             data['network_type'] = "&".join(network_connection_type)
-            data['network_upload_speed'] = float(network_speed.upload)
-            data['network_download_speed'] = float(network_speed.download)
+            data['network_upload_speed'] = int(network_speed.upload)
+            data['network_download_speed'] = int(network_speed.download)
 
             for name in self.status:
                 data[name] = self.status[name]
