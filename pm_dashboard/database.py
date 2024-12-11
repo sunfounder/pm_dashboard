@@ -157,9 +157,10 @@ class Database:
             if len(result) == 0:
                 self.log.warning(f"No data found for query: {query}")
                 result = None
-            result = result[0]
-            if key != "*" and key != "time" and "," not in key:
-                result = result[key]
+            else:
+                result = result[0]
+                if key != "*" and key != "time" and "," not in key:
+                    result = result[key]
         self.log.debug(f"Got data from database: {result}")
         return result
 
