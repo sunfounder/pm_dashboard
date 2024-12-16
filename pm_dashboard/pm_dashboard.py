@@ -367,6 +367,15 @@ def set_oled_network_interface():
     __on_config_changed__({'system': {'oled_network_interface': interface}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-oled-rotation', methods=['POST'])
+@cross_origin()
+def set_oled_rotation():
+    rotation = request.json["rotation"]
+    if rotation not in [0, 180]:
+        return {"status": False, "error": f"[ERROR] rotation {rotation} not found, available values: 0 or 180"}
+    __on_config_changed__({'system': {'oled_rotation': rotation}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
 def clear_history():
