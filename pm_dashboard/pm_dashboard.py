@@ -408,11 +408,12 @@ class PMDashboard(threading.Thread):
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
         __log__ = self.log
-        __app__.logger.handlers = []
-        __app__.logger.propagate = False
-        for handler in self.log.handlers:
-            __app__.logger.addHandler(handler)
-        __app__.logger.setLevel(logging.DEBUG)
+        __app__.logger = self.log
+        # __app__.logger.handlers = []
+        # __app__.logger.propagate = False
+        # for handler in self.log.handlers:
+        #     __app__.logger.addHandler(handler)
+        # __app__.logger.setLevel(logging.DEBUG)
 
         self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
         __db__ = Database(settings['database'], get_logger=get_logger)
@@ -423,7 +424,7 @@ class PMDashboard(threading.Thread):
 
     @log_error
     def set_debug_level(self, level):
-        __app__.logger.setLevel(level)
+        # __app__.logger.setLevel(level)
         __db__.set_debug_level(level)
         self.data_logger.set_debug_level(level)
         self.log.setLevel(level)
