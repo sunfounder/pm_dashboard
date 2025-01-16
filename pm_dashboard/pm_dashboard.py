@@ -18,17 +18,12 @@ from sf_rpi_status import get_disks, get_ips
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 __package_name__ = __name__.split('.')[0]
-__log_path__ = '/var/log/pironman5'
+__log_path__ = '/var/log/{id}' # redefined in __init__.py
 __www_path__ = str(resource_files(__package_name__).joinpath('www'))
 __api_prefix__ = '/api/v1.0'
 __host__ = '0.0.0.0'
 __port__ = 34001
 __log__ = None
-
-__default_settings__ = {
-    "database": "pm_dashboard",
-    "interval": 1,
-}
 
 __db__ = None
 __config__ = {}
@@ -38,7 +33,12 @@ __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
 __mqtt_connected__ = False
 
-__on_config_changed__ = lambda config: None
+__on_outside_config_changed__ = lambda config: None
+__on_inside_config_changed__ = lambda config: None
+
+def __on_config_changed__(config):
+    __on_outside_config_changed__(config)
+    __on_inside_config_changed__(config)
 
 def on_mqtt_connected(client, userdata, flags, rc):
     global __mqtt_connected__
@@ -397,9 +397,8 @@ def delete_log_file():
         return {"status": False, "error": str(e)}
 
 class PMDashboard(threading.Thread):
-    @log_error
-    def __init__(self, device_info=None, peripherals=[], settings=__default_settings__, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log__
+    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
+        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__, __log_path__
         __device_info__ = device_info
 
         threading.Thread.__init__(self)
@@ -409,12 +408,20 @@ class PMDashboard(threading.Thread):
         self.log = get_logger(__name__)
         __log__ = self.log
 
-        self.data_logger = DataLogger(settings=settings, peripherals=peripherals, get_logger=get_logger)
-        __db__ = Database(settings['database'], get_logger=get_logger)
+        __log_path__ = __log_path__.format(id=device_info["id"])
+
         for key, value in config.items():
             __config__[key] = value
 
+        self.data_logger = DataLogger(
+            database=database,
+            spc_enabled=spc_enabled,
+            interval=__config__['system']['interval'],
+            get_logger=get_logger)
+        __db__ = Database(database, get_logger=get_logger)
+
         self.started = False
+        __on_inside_config_changed__ = self.on_config_changed
 
     @log_error
     def set_debug_level(self, level):
@@ -435,9 +442,14 @@ class PMDashboard(threading.Thread):
         threading.Thread.start(self)
 
     @log_error
+    def on_config_changed(self, config):
+        if 'data_interval' in config['system']:
+            self.data_logger.set_interval(config['system']['data_interval'])
+
+    @log_error
     def set_on_config_changed(self, func):
-        global __on_config_changed__
-        __on_config_changed__ = func
+        global __on_outside_config_changed__
+        __on_outside_config_changed__ = func
 
     @log_error
     def run(self):

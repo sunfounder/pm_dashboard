@@ -126,7 +126,7 @@ class Database:
             interval = duration_in_seconds / max_size
             interval = floor(interval)
         query = f'SELECT {keys} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time} GROUP BY time({interval}s)'
-        self.log.warning(f"Query: {query}")
+        # self.log.warning(f"Query: {query}")
         result = self.client.query(query)
         return list(result.get_points())
 

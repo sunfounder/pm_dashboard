@@ -9,6 +9,7 @@ from .utils import log_error
 
 from sf_rpi_status import \
     get_cpu_temperature, \
+    get_gpu_temperature, \
     get_cpu_percent, \
     get_cpu_freq, \
     get_cpu_count, \
@@ -21,15 +22,10 @@ from sf_rpi_status import \
     get_network_connection_type, \
     get_network_speed
 
-default_settings = {
-    "database": "pm_dashboard",
-    "interval": 1,
-}
-
 class DataLogger:
 
     @log_error
-    def __init__(self, settings=default_settings, peripherals=[], get_logger=None):
+    def __init__(self, database='pm_dashboard', interval=1, spc_enabled=False, get_logger=None):
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
@@ -46,10 +42,9 @@ class DataLogger:
         self.thread = None
         self.running = False
 
-        self.db = Database(settings['database'], get_logger=get_logger)
-        self.interval = settings['interval']
-        self.peripherals = peripherals
-        if 'spc' in settings and settings['spc'] is True:
+        self.db = Database(database, get_logger=get_logger)
+        self.interval = interval
+        if spc_enabled:
             self.log.info("SPC peripheral enabled")
             from spc.spc import SPC
             self.spc = SPC()
@@ -67,7 +62,12 @@ class DataLogger:
         self.status = status
 
     @log_error
+    def set_interval(self, interval):
+        self.interval = interval
+
+    @log_error
     def loop(self):
+        start = time.time()
         while self.running:
             boot_time = get_boot_time()
             ips = get_ips()
@@ -77,6 +77,7 @@ class DataLogger:
 
             data = {}
             data['cpu_temperature'] = float(get_cpu_temperature())
+            data['gpu_temperature'] = float(get_gpu_temperature())
             data['cpu_percent'] = float(get_cpu_percent())
             data['cpu_count'] = int(get_cpu_count())
 
@@ -137,7 +138,10 @@ class DataLogger:
             else:
                 self.log.debug(f"Set data: {data}")
 
-            time.sleep(self.interval)
+            elapsed = time.time() - start
+            if elapsed < self.interval:
+                time.sleep(self.interval - elapsed)
+            start += self.interval
 
     @log_error
     def start(self):

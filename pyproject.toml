@@ -22,7 +22,6 @@ dependencies = [
   "flask_cors",
   "influxdb",
   "pyudev",
-  "sf_rpi_status @ git+https://github.com/sunfounder/sf_rpi_status.git",
 ]
 
 [tool.setuptools]
