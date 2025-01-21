@@ -18,7 +18,7 @@ from sf_rpi_status import get_disks, get_ips
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 __package_name__ = __name__.split('.')[0]
-__log_path__ = '/var/log/{id}' # redefined in __init__.py
+__log_path__ = '/var/log/pironman5'
 __www_path__ = str(resource_files(__package_name__).joinpath('www'))
 __api_prefix__ = '/api/v1.0'
 __host__ = '0.0.0.0'
@@ -398,7 +398,7 @@ def delete_log_file():
 
 class PMDashboard(threading.Thread):
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__, __log_path__
+        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__
         __device_info__ = device_info
 
         threading.Thread.__init__(self)
@@ -407,8 +407,6 @@ class PMDashboard(threading.Thread):
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
         __log__ = self.log
-
-        __log_path__ = __log_path__.format(id=device_info["id"])
 
         for key, value in config.items():
             __config__[key] = value
