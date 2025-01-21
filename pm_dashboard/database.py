@@ -117,7 +117,7 @@ class Database:
         if keys != "*":
             newKeys = []
             for k in keys.split(","):
-                newKeys.append(f"{function}({k}) as {k}")
+                newKeys.append(f'{function}("{k}") as "{k}"')
             keys = ",".join(newKeys)
         duration = int(end_time) - int(start_time)
         duration_in_seconds = duration / 1000000000
