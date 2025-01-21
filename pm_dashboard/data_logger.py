@@ -99,7 +99,7 @@ class DataLogger:
             disks = get_disks_info()
             for disk_name in disks:
                 disk = disks[disk_name]
-                data[f'disk_{disk_name}_monted'] = int(disk.mounted)
+                data[f'disk_{disk_name}_mounted'] = int(disk.mounted)
                 data[f'disk_{disk_name}_total'] = int(disk.total)
                 data[f'disk_{disk_name}_used'] = int(disk.used)
                 data[f'disk_{disk_name}_free'] = int(disk.free)
