@@ -76,8 +76,8 @@ class DataLogger:
             network_speed = get_network_speed()
 
             data = {}
-            data['cpu_temperature'] = float(get_cpu_temperature())
-            data['gpu_temperature'] = float(get_gpu_temperature())
+            data['cpu_temperature'] = float(get_cpu_temperature()) if get_cpu_temperature() is not None else None
+            data['gpu_temperature'] = float(get_gpu_temperature()) if get_gpu_temperature() is not None else None
             data['cpu_percent'] = float(get_cpu_percent())
             data['cpu_count'] = int(get_cpu_count())
 
