@@ -50,7 +50,7 @@ DEVICE_INFO = {
 
 DASHBOARD_SETTINGS = {
     "database": "pironman5",
-    "interval": 1,
+    "data_interval": 1,
     "spc": False,
 }
 

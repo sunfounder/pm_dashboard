@@ -28,16 +28,12 @@ class Database:
             # Wait 2 seconds for InfluxDB to start
             time.sleep(2)
 
-        for _ in range(3):
-            self.log.debug("Checking if influxdb is ready...")
-            if self.is_ready():
-                self.log.info("Influxdb is ready")
-                break
-            else:
-                time.sleep(1)
-                self.log.warning("Influxdb is not ready, trying again...")
+        self.log.debug("Checking if influxdb is ready...")
+        if self.is_ready():
+            self.log.info("Influxdb is ready")
         else:
-            self.log.error("Influxdb is not ready after 3 attempts")
+            self.log.error("Influxdb is not ready")
+            return False
 
         databases = self.client.get_list_database()
         if not any(db['name'] == self.database for db in databases):

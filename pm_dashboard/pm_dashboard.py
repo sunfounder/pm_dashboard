@@ -11,7 +11,7 @@ from werkzeug.serving import make_server
 
 from .data_logger import DataLogger
 from .database import Database
-from .utils import log_error
+from .utils import log_error, merge_dict
 
 from sf_rpi_status import get_disks, get_ips
 
@@ -37,8 +37,10 @@ __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
 
 def __on_config_changed__(config):
+    global __config__, __on_outside_config_changed__, __on_inside_config_changed__
     __on_outside_config_changed__(config)
     __on_inside_config_changed__(config)
+    __config__ = merge_dict(__config__, config)
 
 def on_mqtt_connected(client, userdata, flags, rc):
     global __mqtt_connected__
@@ -408,13 +410,12 @@ class PMDashboard(threading.Thread):
         self.log = get_logger(__name__)
         __log__ = self.log
 
-        for key, value in config.items():
-            __config__[key] = value
+        __config__ = config
 
         self.data_logger = DataLogger(
             database=database,
             spc_enabled=spc_enabled,
-            interval=__config__['system']['interval'],
+            interval=__config__['system']['data_interval'],
             get_logger=get_logger)
         __db__ = Database(database, get_logger=get_logger)
 
