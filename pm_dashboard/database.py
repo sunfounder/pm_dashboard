@@ -5,7 +5,6 @@ import logging
 import subprocess
 import time
 from math import floor
-from datetime import datetime, timedelta
 
 class Database:
     def __init__(self, database, get_logger=None):
@@ -28,11 +27,15 @@ class Database:
             # Wait 2 seconds for InfluxDB to start
             time.sleep(2)
 
-        self.log.debug("Checking if influxdb is ready...")
-        if self.is_ready():
-            self.log.info("Influxdb is ready")
+        self.log.debug("Waiting for InfluxDB to be ready")
+        for _ in range(10):
+            if self.is_ready():
+                self.log.info("Influxdb is ready")
+                break
+            else:
+                time.sleep(1)
         else:
-            self.log.error("Influxdb is not ready")
+            self.log.error("Timeout waiting for InfluxDB to be ready")
             return False
 
         databases = self.client.get_list_database()
@@ -87,7 +90,7 @@ class Database:
         # self.log.debug(f"Setting data to database: measurement={measurement}, data={data}")
         if not self.is_ready():
             self.log.error('Database is not ready')
-            return []
+            return False, 'Database is not ready'
         json_body = [
             {
                 "measurement": measurement,
