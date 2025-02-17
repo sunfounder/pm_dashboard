@@ -332,6 +332,15 @@ def set_rgb_speed():
     __on_config_changed__({'system': {'rgb_speed': speed}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-oled-sleep-timeout', methods=['POST'])
+@cross_origin()
+def set_oled_sleep_timeout():
+    timeout = request.json["timeout"]
+    if not isinstance(timeout, int):
+        return {"status": False, "error": f"[ERROR] timeout {timeout} not found, available values: integer"}
+    __on_config_changed__({'system': {'oled_sleep_timeout': timeout}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/set-oled-enable', methods=['POST'])
 @cross_origin()
 def set_oled_enable():
