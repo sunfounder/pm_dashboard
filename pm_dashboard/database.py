@@ -176,4 +176,5 @@ class Database:
         self.client.close()
         if self.influx_manually_started:
             self.stop_influxdb()
+        self.log.info("Database closed")
 

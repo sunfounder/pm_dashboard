@@ -162,4 +162,4 @@ class DataLogger:
         self.running = False
         self.thread.join()
         self.db.close()
-        self.log.info("Data Logger Stop")
+        self.log.info("Data Logger stopped")
