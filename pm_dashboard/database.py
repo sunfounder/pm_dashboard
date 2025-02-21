@@ -41,7 +41,7 @@ class Database:
         databases = self.client.get_list_database()
         if not any(db['name'] == self.database for db in databases):
             self.client.create_database(self.database)
-            self.log.info(f"Database '{self.database}' not exit, created successfully")
+            self.log.info(f"Database '{self.database}' created successfully")
 
         self.client.switch_database(self.database)
 
