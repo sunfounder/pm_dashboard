@@ -156,10 +156,9 @@ class DataLogger:
 
     @log_error
     def stop(self):
-        if not self.running:
-            self.log.warning("Already stopped")
-            return
-        self.running = False
-        self.thread.join()
-        self.db.close()
+        self.log.debug("Stopping Data Logger")
+        if self.running:
+            self.running = False
+            self.thread.join()
+            self.db.close()
         self.log.info("Data Logger stopped")

@@ -407,13 +407,12 @@ def delete_log_file():
     except Exception as e:
         return {"status": False, "error": str(e)}
 
-class PMDashboard(threading.Thread):
+class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__
+        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__, __log_path__
         __device_info__ = device_info
+        __log_path__ = f'/var/log/{__device_info__["id"]}'
 
-        threading.Thread.__init__(self)
-    
         if get_logger is None:
             get_logger = logging.getLogger
         self.log = get_logger(__name__)
@@ -447,7 +446,8 @@ class PMDashboard(threading.Thread):
         self.server = make_server(__host__, __port__, __app__)
         self.ctx = __app__.app_context()
         self.ctx.push()
-        threading.Thread.start(self)
+        self.thread = threading.Thread(target=self.run, daemon=True)
+        self.thread.start()
 
     @log_error
     def on_config_changed(self, config):
@@ -462,9 +462,9 @@ class PMDashboard(threading.Thread):
     @log_error
     def run(self):
         self.log.info("Dashboard Server start")
+        self.started = True
         self.data_logger.start()
         self.server.serve_forever()
-        self.started = True
 
     @log_error
     def shutdown(self):
@@ -472,9 +472,13 @@ class PMDashboard(threading.Thread):
 
     @log_error
     def stop(self):
+        self.log.debug("Stopping Dashboard Server")
         if self.started:
-            self.shutdown()
             self.data_logger.stop()
-        __db__.close()
-        self.log.info("Dashboard Server stopped")
+            __db__.close()
+            self.server.shutdown()
+            self.server.server_close()
+            self.started = False
+            self.thread.join(timeout=5)
+            self.log.info("Dashboard Server stopped")
 
