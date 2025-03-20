@@ -411,7 +411,11 @@ class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
         global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__, __log_path__
         __device_info__ = device_info
-        __log_path__ = f'/var/log/{__device_info__["id"]}'
+        if 'app_name' in __device_info__:
+            app_name = __device_info__['app_name']
+        else:
+            app_name = __device_info__['id']
+        __log_path__ = f'/var/log/{app_name}'
 
         if get_logger is None:
             get_logger = logging.getLogger
