@@ -66,71 +66,76 @@ class DataLogger:
         self.interval = interval
 
     @log_error
+    def get_data(self):
+        boot_time = get_boot_time()
+        ips = get_ips()
+        macs = get_macs()
+        network_connection_type = get_network_connection_type()
+        network_speed = get_network_speed()
+
+        data = {}
+        data['cpu_temperature'] = float(get_cpu_temperature()) if get_cpu_temperature() is not None else None
+        data['gpu_temperature'] = float(get_gpu_temperature()) if get_gpu_temperature() is not None else None
+        data['cpu_percent'] = float(get_cpu_percent())
+        data['cpu_count'] = int(get_cpu_count())
+
+        cpu_freq = get_cpu_freq()
+        data['cpu_freq'] = float(cpu_freq.current)
+        data['cpu_freq_min'] = float(cpu_freq.min)
+        data['cpu_freq_max'] = float(cpu_freq.max)
+
+        cpu_percents = get_cpu_percent(percpu=True)
+        for i, percent in enumerate(cpu_percents):
+            data[f'cpu_{i}_percent'] = float(percent)
+
+        memory = get_memory_info()
+        data['memory_total'] = int(memory.total)
+        data['memory_available'] = int(memory.available)
+        data['memory_percent'] = float(memory.percent)
+        data['memory_used'] = int(memory.used)
+
+        disks = get_disks_info()
+        for disk_name in disks:
+            disk = disks[disk_name]
+            data[f'disk_{disk_name}_mounted'] = int(disk.mounted)
+            data[f'disk_{disk_name}_total'] = int(disk.total)
+            data[f'disk_{disk_name}_used'] = int(disk.used)
+            data[f'disk_{disk_name}_free'] = int(disk.free)
+            data[f'disk_{disk_name}_percent'] = float(disk.percent)
+
+        data['boot_time'] = float(boot_time)
+
+        ips = get_ips()
+        for name in ips:
+            data[f'ip_{name}'] = ips[name]
+
+        macs = get_macs()
+        for name in macs:
+            data[f'mac_{name}'] = macs[name]
+
+        data['network_type'] = "&".join(network_connection_type)
+        data['network_upload_speed'] = int(network_speed.upload)
+        data['network_download_speed'] = int(network_speed.download)
+
+        for name in self.status:
+            data[name] = self.status[name]
+
+        if self.spc is not None:
+            spc = self.spc.read_all()
+            for key in spc:
+                data[key] = spc[key]
+
+        for key in data:
+            value = data[key]
+            if isinstance(value, bool):
+                data[key] = int(value)
+        return data
+
+    @log_error
     def loop(self):
         start = time.time()
         while self.running:
-            boot_time = get_boot_time()
-            ips = get_ips()
-            macs = get_macs()
-            network_connection_type = get_network_connection_type()
-            network_speed = get_network_speed()
-
-            data = {}
-            data['cpu_temperature'] = float(get_cpu_temperature()) if get_cpu_temperature() is not None else None
-            data['gpu_temperature'] = float(get_gpu_temperature()) if get_gpu_temperature() is not None else None
-            data['cpu_percent'] = float(get_cpu_percent())
-            data['cpu_count'] = int(get_cpu_count())
-
-            cpu_freq = get_cpu_freq()
-            data['cpu_freq'] = float(cpu_freq.current)
-            data['cpu_freq_min'] = float(cpu_freq.min)
-            data['cpu_freq_max'] = float(cpu_freq.max)
-
-            cpu_percents = get_cpu_percent(percpu=True)
-            for i, percent in enumerate(cpu_percents):
-                data[f'cpu_{i}_percent'] = float(percent)
-
-            memory = get_memory_info()
-            data['memory_total'] = int(memory.total)
-            data['memory_available'] = int(memory.available)
-            data['memory_percent'] = float(memory.percent)
-            data['memory_used'] = int(memory.used)
-
-            disks = get_disks_info()
-            for disk_name in disks:
-                disk = disks[disk_name]
-                data[f'disk_{disk_name}_mounted'] = int(disk.mounted)
-                data[f'disk_{disk_name}_total'] = int(disk.total)
-                data[f'disk_{disk_name}_used'] = int(disk.used)
-                data[f'disk_{disk_name}_free'] = int(disk.free)
-                data[f'disk_{disk_name}_percent'] = float(disk.percent)
-
-            data['boot_time'] = float(boot_time)
-
-            ips = get_ips()
-            for name in ips:
-                data[f'ip_{name}'] = ips[name]
-
-            macs = get_macs()
-            for name in macs:
-                data[f'mac_{name}'] = macs[name]
-
-            data['network_type'] = "&".join(network_connection_type)
-            data['network_upload_speed'] = int(network_speed.upload)
-            data['network_download_speed'] = int(network_speed.download)
-
-            for name in self.status:
-                data[name] = self.status[name]
-
-            if self.spc is not None:
-                spc = self.spc.read_all()
-                for key in spc:
-                    data[key] = spc[key]
-
-            for key in data:
-                value = data[key]
-                if isinstance(value, bool):
-                    data[key] = int(value)
+            data = self.get_data()
 
             status, msg = self.db.set('history', data)
             if not status:
