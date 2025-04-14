@@ -26,12 +26,14 @@ __port__ = 34001
 __log__ = None
 
 __db__ = None
+__data_logger__ = None
 __config__ = {}
 __app__ = flask.Flask(__name__, static_folder=__www_path__)
 __cors__ = CORS(__app__)
 __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
 __mqtt_connected__ = False
+__enable_history__ = False
 
 __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
@@ -175,13 +177,30 @@ def test_mqtt():
         result['error'] = error
     return result
 
+@__app__.route(f'{__api_prefix__}/get-data')
+@cross_origin()
+def get_data():
+    try:
+        if __enable_history__ == False:
+            data = __data_logger__.get_data()
+        else:
+            num = request.args.get("n")
+            num = int(num)
+            data = __db__.get("history", n=num)
+        return {"status": True, "data": data}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
 @__app__.route(f'{__api_prefix__}/get-history')
 @cross_origin()
 def get_history():
     try:
-        num = request.args.get("n")
-        num = int(num)
-        data = __db__.get("history", n=num)
+        if __enable_history__ == False:
+            data = __data_logger__.get_data()
+        else:
+            num = request.args.get("n")
+            num = int(num)
+            data = __db__.get("history", n=num)
         return {"status": True, "data": data}
     except Exception as e:
         return {"status": False, "error": str(e)}
@@ -190,11 +209,14 @@ def get_history():
 @cross_origin()
 def get_time_range():
     try:
-        start = request.args.get("start")
-        end = request.args.get("end")
-        key = request.args.get("key")
-        data = __db__.get_data_by_time_range("history", start, end, key)
-        return {"status": True, "data": data}
+        if __enable_history__:
+            start = request.args.get("start")
+            end = request.args.get("end")
+            key = request.args.get("key")
+            data = __db__.get_data_by_time_range("history", start, end, key)
+            return {"status": True, "data": data}
+        else:
+            return {"status": False, "error": "History is not enabled"}
     except Exception as e:
         return {"status": False, "error": str(e)}
 
@@ -390,6 +412,8 @@ def set_oled_rotation():
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
 def clear_history():
+    if __enable_history__ == False:
+        return {"status": False, "error": "History is not enabled"}
     __db__.clear_measurement('history')
     return {"status": True, "data": "OK"}
 
@@ -409,7 +433,8 @@ def delete_log_file():
 
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
-        global __config__, __device_info__, __db__, __log__, __on_inside_config_changed__, __log_path__
+        global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
+        global __data_logger__, __db__, __log__
         __device_info__ = device_info
         if 'app_name' in __device_info__:
             app_name = __device_info__['app_name']
@@ -423,20 +448,24 @@ class PMDashboard():
         __log__ = self.log
 
         __config__ = config
+        __enable_history__ = config['system']['enable_history']
 
         self.data_logger = DataLogger(
             database=database,
             spc_enabled=spc_enabled,
             interval=__config__['system']['data_interval'],
             get_logger=get_logger)
-        __db__ = Database(database, get_logger=get_logger)
+        __data_logger__ = self.data_logger
+        if __enable_history__:
+            __db__ = Database(database, get_logger=get_logger)
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
 
     @log_error
     def set_debug_level(self, level):
-        __db__.set_debug_level(level)
+        if __db__:
+            __db__.set_debug_level(level)
         self.data_logger.set_debug_level(level)
         self.log.setLevel(level)
 
@@ -446,7 +475,8 @@ class PMDashboard():
 
     @log_error
     def start(self):
-        __db__.start()
+        if __db__:
+            __db__.start()
         self.server = make_server(__host__, __port__, __app__)
         self.ctx = __app__.app_context()
         self.ctx.push()
@@ -457,6 +487,16 @@ class PMDashboard():
     def on_config_changed(self, config):
         if 'data_interval' in config['system']:
             self.data_logger.set_interval(config['system']['data_interval'])
+        if 'enable_history' in config['system']:
+            if config['system']['enable_history'] == True:
+                if __enable_history__ == False:
+                    self.data_logger.start()
+                __enable_history__ = True
+            else:
+                if __enable_history__ == True:
+                    self.data_logger.stop()
+                __enable_history__ = False
+
 
     @log_error
     def set_on_config_changed(self, func):
@@ -467,7 +507,8 @@ class PMDashboard():
     def run(self):
         self.log.info("Dashboard Server start")
         self.started = True
-        self.data_logger.start()
+        if __enable_history__:
+            self.data_logger.start()
         self.server.serve_forever()
 
     @log_error
@@ -479,7 +520,8 @@ class PMDashboard():
         self.log.debug("Stopping Dashboard Server")
         if self.started:
             self.data_logger.stop()
-            __db__.close()
+            if __db__:
+                __db__.close()
             self.server.shutdown()
             self.server.server_close()
             self.started = False
