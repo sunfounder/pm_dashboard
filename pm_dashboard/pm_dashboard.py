@@ -431,6 +431,24 @@ def delete_log_file():
     except Exception as e:
         return {"status": False, "error": str(e)}
 
+@__app__.route(f'{__api_prefix__}/start-ups-power-failure-simulation', methods=['POST', 'GET'])
+@cross_origin()
+def set_ups_vbus_enable():
+    import subprocess
+    time = request.json["time"]
+    print(f"start-ups-blackout-simulation {time}")
+    subprocess.Popen(['sudo', 'pipower5', '--power-failure-simulation', f'{10}'])
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/get-ups-power-failure-simulation', methods=['POST', 'GET'])
+@cross_origin()
+def get_ups_blackout_simulation():
+    import json
+    with open('/opt/pipower5/blackout_simulation.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return {"status": True, "data":data}
+
+
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
         global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
