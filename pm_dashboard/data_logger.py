@@ -20,7 +20,8 @@ from sf_rpi_status import \
     get_ips, \
     get_macs, \
     get_network_connection_type, \
-    get_network_speed
+    get_network_speed, \
+    PWMFan
 
 class DataLogger:
 
@@ -51,6 +52,8 @@ class DataLogger:
         else:
             self.log.info("SPC peripheral disabled")
         
+        self.pwm_fan = PWMFan()
+
         self.status = {}
 
     @log_error
@@ -78,6 +81,9 @@ class DataLogger:
         data['gpu_temperature'] = float(get_gpu_temperature()) if get_gpu_temperature() is not None else None
         data['cpu_percent'] = float(get_cpu_percent())
         data['cpu_count'] = int(get_cpu_count())
+
+        if  self.pwm_fan._is_ready:
+            data['pwm_fan_speed'] = self.pwm_fan.get_speed()
 
         cpu_freq = get_cpu_freq()
         data['cpu_freq'] = float(cpu_freq.current)
