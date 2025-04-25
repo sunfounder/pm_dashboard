@@ -185,7 +185,10 @@ def get_data():
             data = __data_logger__.get_data()
         else:
             num = request.args.get("n")
-            num = int(num)
+            if num is None:
+                num = 1
+            else:
+                num = int(num)
             data = __db__.get("history", n=num)
         return {"status": True, "data": data}
     except Exception as e:
@@ -199,7 +202,10 @@ def get_history():
             data = __data_logger__.get_data()
         else:
             num = request.args.get("n")
-            num = int(num)
+            if num is None:
+                num = 1
+            else:
+                num = int(num)
             data = __db__.get("history", n=num)
         return {"status": True, "data": data}
     except Exception as e:
