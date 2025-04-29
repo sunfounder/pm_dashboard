@@ -443,7 +443,7 @@ def set_ups_vbus_enable():
     import subprocess
     time = request.json["time"]
     print(f"start-ups-blackout-simulation {time}")
-    subprocess.Popen(['sudo', 'pipower5', '--power-failure-simulation', f'{10}'])
+    subprocess.Popen(['sudo', 'pipower5', '--power-failure-simulation', f'{time}'])
     return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/get-ups-power-failure-simulation', methods=['POST', 'GET'])
