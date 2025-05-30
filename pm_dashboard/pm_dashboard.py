@@ -336,8 +336,8 @@ def set_rgb_speed():
 @cross_origin()
 def set_oled_sleep_timeout():
     timeout = request.json["timeout"]
-    if not isinstance(timeout, int):
-        return {"status": False, "error": f"[ERROR] timeout {timeout} not found, available values: integer"}
+    if not isinstance(timeout, (int, float)) or timeout < 0:
+        return {"status": False, "error": f"[ERROR] timeout {timeout} must be a positive number"}
     __on_config_changed__({'system': {'oled_sleep_timeout': timeout}})
     return {"status": True, "data": "OK"}
 
