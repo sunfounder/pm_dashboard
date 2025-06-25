@@ -12,7 +12,7 @@ from werkzeug.serving import make_server
 from .data_logger import DataLogger
 from .database import Database
 from .utils import log_error, merge_dict
-
+import logging
 from sf_rpi_status import get_disks, get_ips
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -29,6 +29,11 @@ __db__ = None
 __data_logger__ = None
 __config__ = {}
 __app__ = flask.Flask(__name__, static_folder=__www_path__)
+
+__app__.logger.setLevel(logging.WARN)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+
 __cors__ = CORS(__app__)
 __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
@@ -472,6 +477,8 @@ class PMDashboard():
         __log__ = self.log
 
         __config__ = config
+        if 'enable_history' not in __config__['system']:
+            __config__['system']['enable_history'] = False
         __enable_history__ = config['system']['enable_history']
 
         self.data_logger = DataLogger(
