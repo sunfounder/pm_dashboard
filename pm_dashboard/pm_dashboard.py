@@ -13,6 +13,7 @@ from .data_logger import DataLogger
 from .database import Database
 from .utils import log_error, merge_dict
 
+import logging
 from sf_rpi_status import get_disks, get_ips
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -28,6 +29,9 @@ __log__ = None
 __db__ = None
 __config__ = {}
 __app__ = flask.Flask(__name__, static_folder=__www_path__)
+__app__.logger.setLevel(logging.WARN)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 __cors__ = CORS(__app__)
 __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
