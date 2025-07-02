@@ -5,6 +5,9 @@ import logging
 import subprocess
 import time
 from math import floor
+from configupdater import ConfigUpdater
+
+INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
 
 class Database:
     def __init__(self, database, get_logger=None):
@@ -14,6 +17,14 @@ class Database:
         self.database = database
         self.influx_manually_started = False
 
+        # disable InfluxDB logging to avoid cluttering the logs
+        config = ConfigUpdater()
+        config.read(INFLUXDB_CONFIG)
+        if 'http' in config:
+            config['http']['log-enabled'] = 'false'
+            with open(INFLUXDB_CONFIG, 'w') as f:
+                config.write(f)
+        # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
     
     def set_debug_level(self, level):
@@ -146,7 +157,7 @@ class Database:
             query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
             result = self.client.query(query)
             if self.if_too_many_nulls(list(result.get_points())):
-                self.log.warning(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
+                self.log.debug(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
                 continue
             break
         else:
@@ -154,7 +165,7 @@ class Database:
         result = list(result.get_points())
         if n == 1:
             if len(result) == 0:
-                self.log.warning(f"No data found for query: {query}")
+                self.log.debug(f"No data found for query: {query}")
                 result = None
             else:
                 result = result[0]
@@ -164,7 +175,7 @@ class Database:
         return result
 
     def clear_measurement(self, measurement):
-        self.log.warning(f"Clearing database: {self.database}")
+        self.log.info(f"Clearing database: {self.database}")
         if not self.is_ready():
             self.log.error('Database is not ready')
             return False

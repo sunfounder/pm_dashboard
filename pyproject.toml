@@ -22,6 +22,7 @@ dependencies = [
   "flask_cors",
   "influxdb",
   "pyudev",
+  "configupdater",
 ]
 
 [tool.setuptools]
