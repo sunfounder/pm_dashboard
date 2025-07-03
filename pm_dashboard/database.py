@@ -5,7 +5,8 @@ import logging
 import subprocess
 import time
 from math import floor
-from configupdater import ConfigUpdater
+# from configupdater import ConfigUpdater
+from .config import Config
 
 INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
 
@@ -18,12 +19,19 @@ class Database:
         self.influx_manually_started = False
 
         # disable InfluxDB logging to avoid cluttering the logs
-        config = ConfigUpdater()
-        config.read(INFLUXDB_CONFIG)
-        if 'http' in config:
+        try:
+            config = Config(path=INFLUXDB_CONFIG)
+            config.read()
             config['http']['log-enabled'] = 'false'
-            with open(INFLUXDB_CONFIG, 'w') as f:
-                config.write(f)
+            config['logging']['level'] = '\"error\"'
+            config.write()
+
+            import os
+            os.system("systemctl restart influxdb")
+            
+        except Exception as e:
+            self.log.error(f"Failed to disable InfluxDB logging: {e}")
+
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
     
