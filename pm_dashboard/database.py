@@ -11,10 +11,9 @@ from .config import Config
 INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
 
 class Database:
-    def __init__(self, database, get_logger=None):
-        if get_logger is None:
-            get_logger = logging.getLogger
-        self.log = get_logger(__name__)
+    def __init__(self, database, log=None):
+        self.log = log or logging.getLogger(__name__)
+
         self.database = database
         self.influx_manually_started = False
 
@@ -35,10 +34,6 @@ class Database:
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
     
-    def set_debug_level(self, level):
-        self.log.info(f"Setting debug level to {level}")
-        self.log.setLevel(level)
-
     def start(self):
         if not Database.is_influxdb_running():
             self.log.info("Starting influxdb service")

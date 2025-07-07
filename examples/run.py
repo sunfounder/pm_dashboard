@@ -58,7 +58,7 @@ pm_dashboard = PMDashboard(device_info=DEVICE_INFO,
                             settings=DASHBOARD_SETTINGS,
                             config=config,
                             peripherals=PERIPHERALS,
-                            get_logger=get_child_logger)
+                            log=log)
 
 pm_dashboard.set_debug_level(logging.DEBUG)
 pm_dashboard.start()

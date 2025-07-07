@@ -461,7 +461,7 @@ def get_ups_blackout_simulation():
 
 
 class PMDashboard():
-    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, get_logger=None):
+    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None):
         global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
         global __data_logger__, __db__, __log__
         __device_info__ = device_info
@@ -471,9 +471,7 @@ class PMDashboard():
             app_name = __device_info__['id']
         __log_path__ = f'/var/log/{app_name}'
 
-        if get_logger is None:
-            get_logger = logging.getLogger
-        self.log = get_logger(__name__)
+        self.log = log or logging.getLogger(__name__)
         __log__ = self.log
 
         __config__ = config
@@ -485,20 +483,13 @@ class PMDashboard():
             database=database,
             spc_enabled=spc_enabled,
             interval=__config__['system']['data_interval'],
-            get_logger=get_logger)
+            log=log)
         __data_logger__ = self.data_logger
         if __enable_history__:
-            __db__ = Database(database, get_logger=get_logger)
+            __db__ = Database(database, log=log)
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
-
-    @log_error
-    def set_debug_level(self, level):
-        if __db__:
-            __db__.set_debug_level(level)
-        self.data_logger.set_debug_level(level)
-        self.log.setLevel(level)
 
     @log_error
     def update_status(self, status):

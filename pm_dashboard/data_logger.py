@@ -26,10 +26,9 @@ from sf_rpi_status import \
 class DataLogger:
 
     @log_error
-    def __init__(self, database='pm_dashboard', interval=1, spc_enabled=False, get_logger=None):
-        if get_logger is None:
-            get_logger = logging.getLogger
-        self.log = get_logger(__name__)
+    def __init__(self, database='pm_dashboard', interval=1, spc_enabled=False, log=None):
+        self.log = log or logging.getLogger(app_name)
+        self._is_ready = False
 
         try:
             self.client = InfluxDBClient(host='localhost', port=8086)
@@ -43,7 +42,7 @@ class DataLogger:
         self.thread = None
         self.running = False
 
-        self.db = Database(database, get_logger=get_logger)
+        self.db = Database(database, log=log)
         self.interval = interval
         if spc_enabled:
             self.log.info("SPC peripheral enabled")
@@ -55,10 +54,6 @@ class DataLogger:
         self.pwm_fan = PWMFan()
 
         self.status = {}
-
-    @log_error
-    def set_debug_level(self, level):
-        self.log.setLevel(level)
 
     @log_error
     def update_status(self, status):
