@@ -24,6 +24,7 @@ __api_prefix__ = '/api/v1.0'
 __host__ = '0.0.0.0'
 __port__ = 34001
 __log__ = None
+__restart_service__ = lambda: None
 
 __db__ = None
 __data_logger__ = None
@@ -365,6 +366,55 @@ def set_rgb_speed():
     __on_config_changed__({'system': {'rgb_speed': speed}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-enable', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_enable():
+    enable = request.json["enable"]
+    __on_config_changed__({'system': {'rgb_matrix_enable': enable}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-style', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_style():
+    style = request.json["style"]
+    __on_config_changed__({'system': {'rgb_matrix_style': style}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-color', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_color():
+    color = request.json["color"]
+    __on_config_changed__({'system': {'rgb_matrix_color': color}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-color2', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_color2():
+    color = request.json["color"]
+    __on_config_changed__({'system': {'rgb_matrix_color2': color}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-brightness', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_brightness():
+    brightness = request.json["brightness"]
+    __on_config_changed__({'system': {'rgb_matrix_brightness': brightness}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-rgb-matrix-speed', methods=['POST'])
+@cross_origin()
+def set_rgb_matrix_speed():
+    speed = request.json["speed"]
+    __on_config_changed__({'system': {'rgb_matrix_speed': speed}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-debug-level', methods=['POST'])
+@cross_origin()
+def set_debug_level():
+    level = request.json["level"]
+    __on_config_changed__({'system': {'debug_level': level}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/set-oled-sleep-timeout', methods=['POST'])
 @cross_origin()
 def set_oled_sleep_timeout():
@@ -459,11 +509,21 @@ def get_ups_blackout_simulation():
         data = json.load(f)
     return {"status": True, "data":data}
 
+@__app__.route(f'{__api_prefix__}/set-restart-service', methods=['POST'])
+@cross_origin()
+def set_restart_service():
+    restart = request.json["restart"]
+    if restart == True:
+        __restart_service__()
+    return {"status": True, "data": "OK"}
+
 
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None):
         global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
         global __data_logger__, __db__, __log__
+        global __restart_service__
+
         __device_info__ = device_info
         if 'app_name' in __device_info__:
             app_name = __device_info__['app_name']
@@ -519,11 +579,15 @@ class PMDashboard():
                     self.data_logger.stop()
                 __enable_history__ = False
 
-
     @log_error
     def set_on_config_changed(self, func):
         global __on_outside_config_changed__
         __on_outside_config_changed__ = func
+
+    @log_error
+    def set_on_restart_service(self, func):
+        global __restart_service__
+        __restart_service__ = func
 
     @log_error
     def run(self):
