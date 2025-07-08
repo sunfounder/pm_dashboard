@@ -16,6 +16,7 @@ import logging
 from sf_rpi_status import get_disks, get_ips
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+AVAILABLE_OLED_PAGES = []
 
 __package_name__ = __name__.split('.')[0]
 __log_path__ = '/var/log/pironman5'
@@ -470,6 +471,18 @@ def set_oled_rotation():
     __on_config_changed__({'system': {'oled_rotation': rotation}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-oled-pages', methods=['POST'])
+@cross_origin()
+def set_oled_pages():
+    pages = request.json["pages"]
+    if pages is None:
+        return {"status": False, "error": "[ERROR] pages not found"}
+    for page in pages:
+        if page not in AVAILABLE_OLED_PAGES:
+            return {"status": False, "error": f"[ERROR] page {page} not found, available pages: {AVAILABLE_OLED_PAGES}"}
+    __on_config_changed__({'system': {'oled_pages': pages}})
+    return {"status": True, "data": "OK"}
+
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
 def clear_history():
@@ -521,8 +534,8 @@ def set_restart_service():
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None):
         global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
-        global __data_logger__, __db__, __log__
-        global __restart_service__
+        global __data_logger__, __db__, __log__, __restart_service__
+        global AVAILABLE_OLED_PAGES
 
         __device_info__ = device_info
         if 'app_name' in __device_info__:
@@ -550,6 +563,11 @@ class PMDashboard():
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
+
+        AVAILABLE_OLED_PAGES = []
+        for item in __device_info__['peripherals']:
+            if item.startswith("oled_page_"):
+                AVAILABLE_OLED_PAGES.append(item.split("oled_page_")[1])
 
     @log_error
     def update_status(self, status):
