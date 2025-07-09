@@ -576,12 +576,17 @@ class PMDashboard():
     @log_error
     def start(self):
         if __db__:
+            self.log.debug("Starting Database")
             __db__.start()
+            self.log.info("Database Started")
+        self.log.debug("Initializing Dashboard Server")
+        self.log.info(f"Starting Dashboard Server on {__host__}:{__port__}")
         self.server = make_server(__host__, __port__, __app__)
         self.ctx = __app__.app_context()
         self.ctx.push()
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
+        self.log.info("Dashboard Server Started")
 
     @log_error
     def on_config_changed(self, config):
@@ -609,11 +614,16 @@ class PMDashboard():
 
     @log_error
     def run(self):
-        self.log.info("Dashboard Server start")
         self.started = True
         if __enable_history__:
-            self.data_logger.start()
+            self.log.debug("Starting Database")
+            __db__.start()
+            self.log.info("Database Started")
+        self.log.debug("Starting Data Logger")
+        self.data_logger.start()
+        self.log.info("Data Logger Started")
         self.server.serve_forever()
+        self.log.info("Dashboard Server started")
 
     @log_error
     def shutdown(self):
