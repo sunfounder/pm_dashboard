@@ -1,3 +1,4 @@
+from textwrap import indent
 import time
 import logging
 import threading
@@ -7,6 +8,7 @@ from influxdb import InfluxDBClient
 from .database import Database
 from .utils import log_error
 
+# deprecated
 from sf_rpi_status import \
     get_cpu_temperature, \
     get_gpu_temperature, \
@@ -51,13 +53,20 @@ class DataLogger:
         else:
             self.log.info("SPC peripheral disabled")
         
+        # deprecated
         self.pwm_fan = PWMFan()
 
         self.status = {}
+        self.__read_data__ = None
 
+    # deprecated
     @log_error
     def update_status(self, status):
         self.status = status
+
+    @log_error
+    def set_read_data(self, func):
+        self.__read_data__ = func
 
     @log_error
     def set_interval(self, interval):
@@ -136,7 +145,20 @@ class DataLogger:
     def loop(self):
         start = time.time()
         while self.running:
-            data = self.get_data()
+            if self.__read_data__ is not None:
+                data = self.__read_data__()
+            else:
+                data = self.get_data() # deprecated
+            if data == {}:
+                continue
+
+            for key, value in data.items():
+                if isinstance(value, bool):
+                    data[key] = int(value)
+                if isinstance(value, list):
+                    data[key] = str(value)
+                if isinstance(value, dict):
+                    data[key] = str(value)
 
             status, msg = self.db.set('history', data)
             if not status:

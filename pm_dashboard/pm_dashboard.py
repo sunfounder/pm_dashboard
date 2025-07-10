@@ -13,7 +13,7 @@ from .data_logger import DataLogger
 from .database import Database
 from .utils import log_error, merge_dict
 import logging
-from sf_rpi_status import get_disks, get_ips
+from sf_rpi_status import get_disks, get_ips # deprecated
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 AVAILABLE_OLED_PAGES = []
@@ -42,6 +42,7 @@ __device_info__ = {}
 __mqtt_connected__ = False
 __enable_history__ = False
 
+__read_data__ = lambda: {}
 __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
 
@@ -277,11 +278,13 @@ def get_default_on():
     default_on = __db__.get("history", "default_on")
     return {"status": True, "data": default_on}
 
+# deprecated
 @__app__.route(f'{__api_prefix__}/get-disk-list')
 @cross_origin()
 def get_disk_list():
     return {"status": True, "data": get_disks()}
 
+# deprecated
 @__app__.route(f'{__api_prefix__}/get-network-interface-list')
 @cross_origin()
 def get_network_interface_list():
@@ -434,6 +437,7 @@ def set_oled_enable():
     __on_config_changed__({'system': {'oled_enable': enable}})
     return {"status": True, "data": "OK"}
 
+# deprecated
 @__app__.route(f'{__api_prefix__}/set-oled-disk', methods=['POST'])
 @cross_origin()
 def set_oled_disk():
@@ -448,6 +452,7 @@ def set_oled_disk():
     __on_config_changed__({'system': {'oled_disk': disk}})
     return {"status": True, "data": "OK"}
 
+# deprecated
 @__app__.route(f'{__api_prefix__}/set-oled-network-interface', methods=['POST'])
 @cross_origin()
 def set_oled_network_interface():
@@ -569,6 +574,7 @@ class PMDashboard():
             if item.startswith("oled_page_"):
                 AVAILABLE_OLED_PAGES.append(item.split("oled_page_")[1])
 
+    # deprecated
     @log_error
     def update_status(self, status):
         self.data_logger.update_status(status)
@@ -601,6 +607,12 @@ class PMDashboard():
                 if __enable_history__ == True:
                     self.data_logger.stop()
                 __enable_history__ = False
+
+    @log_error
+    def set_read_data(self, func):
+        global __read_data__
+        __read_data__ = func
+        self.data_logger.set_read_data(func)
 
     @log_error
     def set_on_config_changed(self, func):
