@@ -148,7 +148,7 @@ class Database:
         result = self.client.query(query)
         return list(result.get_points())
 
-    def if_too_many_nulls(self, result, threshold=0.3):
+    def if_too_many_nulls(self, result, threshold=0.5):
         for point in result:
             error_length = len([key for key, value in point.items() if value is None])
             error_ratio = error_length / len(point)
