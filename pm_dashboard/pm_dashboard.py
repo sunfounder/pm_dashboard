@@ -530,9 +530,7 @@ def get_ups_blackout_simulation():
 @__app__.route(f'{__api_prefix__}/set-restart-service', methods=['POST'])
 @cross_origin()
 def set_restart_service():
-    restart = request.json["restart"]
-    if restart == True:
-        __restart_service__()
+    __restart_service__()
     return {"status": True, "data": "OK"}
 
 
