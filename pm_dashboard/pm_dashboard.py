@@ -535,7 +535,7 @@ def set_restart_service():
 
 
 class PMDashboard():
-    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None):
+    def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None, get_logger=None):
         global __config__, __device_info__, __on_inside_config_changed__, __log_path__, __enable_history__
         global __data_logger__, __db__, __log__, __restart_service__
         global AVAILABLE_OLED_PAGES
@@ -547,7 +547,10 @@ class PMDashboard():
             app_name = __device_info__['id']
         __log_path__ = f'/var/log/{app_name}'
 
-        self.log = log or logging.getLogger(__name__)
+        if get_logger:
+            self.log = get_logger(__name__)
+        else:
+            self.log = log or logging.getLogger(__name__)
         __log__ = self.log
 
         __config__ = config
