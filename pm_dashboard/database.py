@@ -159,18 +159,13 @@ class Database:
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
-        query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
+
+        # Read data from last 1 second
+        time_filter = "time < now() - 1s"
+        query = f"SELECT {key} FROM {measurement} WHERE {time_filter} ORDER BY time DESC LIMIT {n}"
         with self.lock:
             result = self.client.query(query)
-        # for _ in range(3):
-        #     query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
-        #     result = self.client.query(query)
-        #     if self.if_too_many_nulls(list(result.get_points())):
-        #         self.log.warning(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
-        #         continue
-        #     break
-        # else:
-        #     return None
+
         result = list(result.get_points())
         if n == 1:
             if len(result) == 0:
