@@ -51,7 +51,7 @@ class DataLogger:
             from spc.spc import SPC
             self.spc = SPC()
         else:
-            self.log.info("SPC peripheral disabled")
+            self.log.debug("SPC peripheral disabled")
         
         # deprecated
         self.pwm_fan = PWMFan()
