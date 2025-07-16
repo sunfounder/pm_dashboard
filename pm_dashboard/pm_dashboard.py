@@ -562,7 +562,7 @@ class PMDashboard():
             database=database,
             spc_enabled=spc_enabled,
             interval=__config__['system']['data_interval'],
-            log=log)
+            log=self.log)
         __data_logger__ = self.data_logger
         if __enable_history__:
             __db__ = Database(database, log=log)
