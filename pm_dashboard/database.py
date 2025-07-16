@@ -5,14 +5,15 @@ import logging
 import subprocess
 import time
 from math import floor
-# from configupdater import ConfigUpdater
 from .config import Config
+import threading
 
 INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
 
 class Database:
     def __init__(self, database, log=None):
         self.log = log or logging.getLogger(__name__)
+        self.lock = threading.Lock()
 
         self.database = database
         self.influx_manually_started = False
@@ -112,7 +113,8 @@ class Database:
             }
         ]
         try:
-            self.client.write_points(json_body)
+            with self.lock:
+                self.client.write_points(json_body)
             return True, json_body
         except InfluxDBClientError as e:
             return False, json.loads(e.content)["error"]
@@ -140,7 +142,8 @@ class Database:
             interval = floor(interval)
         query = f'SELECT {keys} FROM {measurement} WHERE time >= {start_time} AND time <= {end_time} GROUP BY time({interval}s)'
         # self.log.warning(f"Query: {query}")
-        result = self.client.query(query)
+        with self.lock:
+            result = self.client.query(query)
         return list(result.get_points())
 
     def if_too_many_nulls(self, result, threshold=0.5):
@@ -156,15 +159,18 @@ class Database:
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
-        for _ in range(3):
-            query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
+        query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
+        with self.lock:
             result = self.client.query(query)
-            if self.if_too_many_nulls(list(result.get_points())):
-                self.log.warning(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
-                continue
-            break
-        else:
-            return None
+        # for _ in range(3):
+        #     query = f"SELECT {key} FROM {measurement} ORDER BY time DESC LIMIT {n}"
+        #     result = self.client.query(query)
+        #     if self.if_too_many_nulls(list(result.get_points())):
+        #         self.log.warning(f"Too many nulls in the result of query: {query}, result: {list(result.get_points())}. trying again...")
+        #         continue
+        #     break
+        # else:
+        #     return None
         result = list(result.get_points())
         if n == 1:
             if len(result) == 0:
