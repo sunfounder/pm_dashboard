@@ -523,7 +523,20 @@ def set_ups_vbus_enable():
 @cross_origin()
 def get_ups_blackout_simulation():
     import json
-    with open('/opt/pipower5/blackout_simulation.json', 'r', encoding='utf-8') as f:
+    import os
+    import time
+
+    try:
+        timeout = request.json["timeout"]
+    except:
+        timeout = 3
+    
+    st = time.time()
+    file_path = '/opt/pipower5/blackout_simulation'
+    while os.path.exists(file_path + ".lock") and time.time() - st < timeout:
+        print("file is being written ...")
+        time.sleep(1)
+    with open(file_path + '.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
     return {"status": True, "data":data}
 
