@@ -546,6 +546,14 @@ def set_restart_service():
     __restart_service__()
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-database-retention-days', methods=['POST'])
+@cross_origin()
+def set_database_retention_days():
+    database_retention_days = request.json["days"]
+    if database_retention_days is None:
+        return {"status": False, "error": "[ERROR] database_retention_days not found"}
+    __on_config_changed__({'system': {'database_retention_days': database_retention_days}})
+    return {"status": True, "data": "OK"}
 
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', spc_enabled=False, config=None, log=None, get_logger=None):
@@ -570,6 +578,9 @@ class PMDashboard():
         if 'enable_history' not in __config__['system']:
             __config__['system']['enable_history'] = False
         __enable_history__ = config['system']['enable_history']
+        if 'database_retention_days' not in __config__['system']:
+            __config__['system']['database_retention_days'] = 30
+        database_retention_days = __config__['system']['database_retention_days'] 
 
         self.data_logger = DataLogger(
             database=database,
@@ -578,7 +589,7 @@ class PMDashboard():
             log=self.log)
         __data_logger__ = self.data_logger
         if __enable_history__:
-            __db__ = Database(database, log=log)
+            __db__ = Database(database, log=log, retention_days=database_retention_days)
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
@@ -612,6 +623,9 @@ class PMDashboard():
     def on_config_changed(self, config):
         if 'data_interval' in config['system']:
             self.data_logger.set_interval(config['system']['data_interval'])
+        if 'database_retention_days' in config['system']:
+            __config__['system']['database_retention_days'] = config['system']['database_retention_days']
+            __db__.set_retention_days(config['system']['database_retention_days'])
         if 'enable_history' in config['system']:
             if config['system']['enable_history'] == True:
                 if __enable_history__ == False:

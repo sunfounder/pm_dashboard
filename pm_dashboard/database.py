@@ -5,17 +5,21 @@ import logging
 import subprocess
 import time
 from math import floor
+import re
+
+from pm_dashboard.utils import log_error
 from .config import Config
 import threading
 
 INFLUXDB_CONFIG = "/etc/influxdb/influxdb.conf"
 
 class Database:
-    def __init__(self, database, log=None):
+    def __init__(self, database, log=None, retention_days=30):
         self.log = log or logging.getLogger(__name__)
         self.lock = threading.Lock()
 
         self.database = database
+        self.retention_days = retention_days
         self.influx_manually_started = False
 
         # disable InfluxDB logging to avoid cluttering the logs
@@ -34,6 +38,7 @@ class Database:
 
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
+        self.ensure_retention_policy_consistency()
     
     def start(self):
         if not Database.is_influxdb_running():
@@ -100,6 +105,107 @@ class Database:
 
     def stop_influxdb(self):
         subprocess.Popen(["pkill", "influxd"])
+
+    def parse_influxdb_duration(self, duration_str):
+        """解析InfluxDB返回的各种时间格式为天数"""
+        if duration_str == "INF":
+            return float('inf')
+            
+        # 处理简单格式：Xd
+        if duration_str.endswith('d'):
+            try:
+                return int(duration_str.rstrip('d'))
+            except ValueError:
+                pass
+                
+        # 处理复合格式：XhYmZs
+        match = re.match(r'(\d+)h(\d+)m(\d+)s', duration_str)
+        if match:
+            hours = int(match.group(1))
+            minutes = int(match.group(2))
+            seconds = int(match.group(3))
+            
+            # 转换为天
+            total_seconds = hours * 3600 + minutes * 60 + seconds
+            return total_seconds / (24 * 3600)
+            
+        # 无法解析的格式
+        self.log.warning(f"Unsupported duration format: {duration_str}")
+        return None
+
+    @log_error
+    def ensure_retention_policy_consistency(self):
+        """确保保留策略与配置一致"""
+        try:
+            policies = self.client.get_list_retention_policies(self.database)
+            default_policy = next((p for p in policies if p["default"]), None)
+            
+            # 预期的保留时长（天）和InfluxDB格式
+            expected_days = self.retention_days
+            expected_duration = f"{expected_days}d"
+            
+            if not default_policy:
+                # 创建默认保留策略
+                self.set_retention_days(expected_days)
+                self.log.info(f"Created default retention policy: {expected_duration}")
+            else:
+                # 检查现有默认策略是否符合配置
+                current_duration = default_policy["duration"]
+                
+                # 使用增强的解析函数
+                current_days = self.parse_influxdb_duration(current_duration)
+                
+                if current_days is None:
+                    self.log.error(f"Failed to parse retention duration: {current_duration}")
+                    return
+                    
+                if current_days != expected_days:
+                    # 更新策略
+                    self.set_retention_days(expected_days)
+                    self.log.info(f"Updated inconsistent retention policy: {current_duration} → {expected_duration}")
+                else:
+                    self.log.debug(f"Retention policy is consistent: {expected_duration}")
+
+        except Exception as e:
+            self.log.exception(f"Failed to check retention policy consistency: {e}")
+
+    @log_error
+    def set_retention_days(self, days):
+        """设置数据库的默认保留天数"""
+        try:
+            policy_name = "default_policy"
+            duration = f"{days}d"
+            
+            # 检查策略是否存在
+            policies = self.client.get_list_retention_policies(self.database)
+            policy_names = [p["name"] for p in policies]
+            
+            if policy_name in policy_names:
+                # 修改现有策略
+                self.client.alter_retention_policy(
+                    policy_name,
+                    database=self.database,
+                    duration=duration,
+                    replication=1,
+                    default=True
+                )
+                self.log.info(f"Updated retention policy to {duration}")
+            else:
+                # 创建新策略
+                self.client.create_retention_policy(
+                    policy_name,
+                    duration=duration,
+                    replication=1,
+                    database=self.database,
+                    default=True
+                )
+                self.log.info(f"Created retention policy {policy_name} with duration {duration}")
+                
+            return True, f"Retention policy set to {days} days"
+            
+        except Exception as e:
+            self.log.error(f"Failed to set retention policy: {e}")
+            return False, str(e)
 
     def set(self, measurement, data):
         # self.log.debug(f"Setting data to database: measurement={measurement}, data={data}")
