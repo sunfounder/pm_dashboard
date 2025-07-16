@@ -118,12 +118,12 @@ class Database:
             except ValueError:
                 pass
                 
-        # 处理复合格式：XhYmZs
-        match = re.match(r'(\d+)h(\d+)m(\d+)s', duration_str)
+        # 处理复合格式：支持XhYmZs、XhYm、Xh等任意组合
+        match = re.match(r'((\d+)h)?((\d+)m)?((\d+)s)?', duration_str)
         if match:
-            hours = int(match.group(1))
-            minutes = int(match.group(2))
-            seconds = int(match.group(3))
+            hours = int(match.group(2)) if match.group(2) else 0
+            minutes = int(match.group(4)) if match.group(4) else 0
+            seconds = int(match.group(6)) if match.group(6) else 0
             
             # 转换为天
             total_seconds = hours * 3600 + minutes * 60 + seconds
