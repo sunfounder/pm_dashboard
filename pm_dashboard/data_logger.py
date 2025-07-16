@@ -152,19 +152,21 @@ class DataLogger:
             if data == {}:
                 continue
 
+            new_data = {}
             for key, value in data.items():
                 if isinstance(value, bool):
-                    data[key] = int(value)
-                if isinstance(value, list):
-                    data[key] = str(value)
-                if isinstance(value, dict):
-                    data[key] = str(value)
+                    value = int(value)
+                elif isinstance(value, list):
+                    continue
+                elif isinstance(value, dict):
+                    continue
+                new_data[key] = value
 
-            status, msg = self.db.set('history', data)
+            status, msg = self.db.set('history', new_data)
             if not status:
                 self.log.error(f"Failed to set data: {msg}")
             else:
-                self.log.debug(f"Set data: {data}")
+                self.log.debug(f"Set data: {new_data}")
 
             elapsed = time.time() - start
             if elapsed < self.interval:
