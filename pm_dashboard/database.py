@@ -38,7 +38,6 @@ class Database:
 
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
-        self.ensure_retention_policy_consistency()
     
     def start(self):
         if not Database.is_influxdb_running():
@@ -64,6 +63,7 @@ class Database:
             self.log.info(f"Database '{self.database}' created successfully")
 
         self.client.switch_database(self.database)
+        self.ensure_retention_policy_consistency()
 
     def is_ready(self):
         ports = Database.get_influxdb_ports()
