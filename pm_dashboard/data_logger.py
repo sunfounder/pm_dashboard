@@ -165,8 +165,8 @@ class DataLogger:
             status, msg = self.db.set('history', new_data)
             if not status:
                 self.log.error(f"Failed to set data: {msg}")
-            else:
-                self.log.debug(f"Set data: {new_data}")
+            # else:
+                # self.log.debug(f"Set data: {new_data}")
 
             elapsed = time.time() - start
             if elapsed < self.interval:

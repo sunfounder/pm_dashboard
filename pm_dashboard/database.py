@@ -281,7 +281,7 @@ class Database:
                 result = result[0]
                 if key != "*" and key != "time" and "," not in key:
                     result = result[key]
-        self.log.debug(f"Got data from database: {result}")
+        # self.log.debug(f"Got data from database: {result}")
         return result
 
     def clear_measurement(self, measurement):

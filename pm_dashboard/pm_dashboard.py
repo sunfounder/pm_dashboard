@@ -17,6 +17,14 @@ from sf_rpi_status import get_disks, get_ips # deprecated
 
 DEBUG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 AVAILABLE_OLED_PAGES = []
+AVAILABLE_SEND_EMAIL_ON = [
+    "low_battery",
+    "power_disconnected",
+    "power_restored",
+    "power_insufficient",
+    "battery_critical_shutdown",
+    "battery_voltage_critical_shutdown",
+]
 
 __package_name__ = __name__.split('.')[0]
 __log_path__ = '/var/log/pironman5'
@@ -45,6 +53,7 @@ __enable_history__ = False
 __read_data__ = lambda: {}
 __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
+__test_smtp__ = lambda: False
 
 def __on_config_changed__(config):
     global __config__, __on_outside_config_changed__, __on_inside_config_changed__
@@ -488,6 +497,98 @@ def set_oled_pages():
     __on_config_changed__({'system': {'oled_pages': pages}})
     return {"status": True, "data": "OK"}
 
+@__app__.route(f'{__api_prefix__}/set-send-email-on', methods=['POST'])
+@cross_origin()
+def set_send_email_on():
+    if "on" not in request.json:
+        return {"status": False, "error": "[ERROR] on not found"}
+    on = request.json["on"]
+    if on is None:
+        return {"status": False, "error": "[ERROR] on not found"}
+    for item in on:
+        if item not in AVAILABLE_SEND_EMAIL_ON:
+            return {"status": False, "error": f"[ERROR] on {item} not found, available values: {AVAILABLE_SEND_EMAIL_ON}"}
+    __on_config_changed__({'system': {'send_email_on': on}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-send-email-to', methods=['POST'])
+@cross_origin()
+def set_send_email_to():
+    if "to" not in request.json:
+        return {"status": False, "error": "[ERROR] to not found"}
+    to = request.json["to"]
+    if to is None:
+        return {"status": False, "error": "[ERROR] to not found"}
+    __on_config_changed__({'system': {'send_email_to': to}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-smtp-server', methods=['POST'])
+@cross_origin()
+def set_smtp_server():
+    if "server" not in request.json:
+        return {"status": False, "error": "[ERROR] server not found"}
+    server = request.json["server"]
+    if server is None:
+        return {"status": False, "error": "[ERROR] server not found"}
+    __on_config_changed__({'system': {'smtp_server': server}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-smtp-port', methods=['POST'])
+@cross_origin()
+def set_smtp_port():
+    if "port" not in request.json:
+        return {"status": False, "error": "[ERROR] port not found"}
+    port = request.json["port"]
+    if not isinstance(port, int) or port <= 0:
+        return {"status": False, "error": "[ERROR] port must be a positive integer"}
+    __on_config_changed__({'system': {'smtp_port': port}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-smtp-email', methods=['POST'])
+@cross_origin()
+def set_smtp_email():
+    if "email" not in request.json:
+        return {"status": False, "error": "[ERROR] email not found"}
+    email = request.json["email"]
+    if email is None:
+        return {"status": False, "error": "[ERROR] email not found"}
+    __on_config_changed__({'system': {'smtp_email': email}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-smtp-password', methods=['POST'])
+@cross_origin()
+def set_smtp_password():
+    if "password" not in request.json:
+        return {"status": False, "error": "[ERROR] password not found"}
+    smtp_password = request.json["password"]
+    if smtp_password is None:
+        return {"status": False, "error": "[ERROR] password not found"}
+    __on_config_changed__({'system': {'smtp_password': smtp_password}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/set-smtp-security', methods=['POST'])
+@cross_origin()
+def set_smtp_security():
+    if "security" not in request.json:
+        return {"status": False, "error": "[ERROR] security not found"}
+    security = request.json["security"]
+    if security is None:
+        return {"status": False, "error": "[ERROR] security not found"}
+    if security not in ['none', 'ssl', 'tls']:
+        return {"status": False, "error": "[ERROR] security must be 'none', 'ssl' or 'tls'"}
+    __on_config_changed__({'system': {'smtp_security': security}})
+    return {"status": True, "data": "OK"}
+
+@__app__.route(f'{__api_prefix__}/test-smtp', methods=['POST', 'GET'])
+@cross_origin()
+def test_smtp():
+    result = __test_smtp__()
+    status, error = result
+    if status:
+        return {"status": status, "data": "OK"}
+    else:
+        return {"status": status, "error": f'{error}'}
+
 @__app__.route(f'{__api_prefix__}/clear-history', methods=['POST', 'GET'])
 @cross_origin()
 def clear_history():
@@ -606,11 +707,13 @@ class PMDashboard():
 
     @log_error
     def set_debug_level(self, level):
-        # if __db__:
-        #     __db__.set_debug_level(level)
-        # self.data_logger.set_debug_level(level)
         self.log.setLevel(level)
     
+    @log_error
+    def set_test_smtp(self, func):
+        global __test_smtp__
+        __test_smtp__ = func
+
     @log_error
     def start(self):
         if __db__:
