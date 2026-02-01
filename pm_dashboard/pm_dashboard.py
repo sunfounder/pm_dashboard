@@ -57,9 +57,10 @@ def on_mqtt_connected(client, userdata, flags, rc):
         __mqtt_connected__ = False
 
 def _get_log(name, line_count=100, filter=[], level="INFO"):
-    if path.exists(f"{__log_path__}/{name}") == False:
+    normalized_filename = basename(name)
+    if path.exists(f"{__log_path__}/{normalized_filename}") == False:
         return False
-    with open(f"{__log_path__}/{name}", 'r') as f:
+    with open(f"{__log_path__}/{normalized_filename}", 'r') as f:
         lines = f.readlines()
         lines = lines[-line_count:]
         data = []
@@ -432,12 +433,13 @@ def clear_history():
 @cross_origin()
 def delete_log_file():
     filename = request.json["filename"]
-    if filename is None:
+    normalized_filename = basename(filename)
+    if normalized_filename is None:
         return {"status": False, "error": "[ERROR] file not found"}
-    if path.exists(f"{__log_path__}/{filename}") == False:
-        return {"status": False, "error": f"[ERROR] file {filename} not found"}
+    if path.exists(f"{__log_path__}/{normalized_filename}") == False:
+        return {"status": False, "error": f"[ERROR] file {normalized_filename} not found"}
     try:
-        remove(f"{__log_path__}/{filename}")
+        remove(f"{__log_path__}/{normalized_filename}")
         return {"status": True, "data": "OK"}
     except Exception as e:
         return {"status": False, "error": str(e)}
