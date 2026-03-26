@@ -50,6 +50,7 @@ __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
 __mqtt_connected__ = False
 __enable_history__ = False
+DEFAULT_VIRTUAL_INTERFACE_PREFIXES = ['veth', 'br-', 'docker', 'virbr', 'vmnet']
 
 __read_data__ = lambda: {}
 __get_ip_data__ = lambda: {}
@@ -300,8 +301,18 @@ def get_disk_list():
 @__app__.route(f'{__api_prefix__}/get-network-interface-list')
 @cross_origin()
 def get_network_interface_list():
-    interfaces = list(get_ips().keys())
+    prefixes = tuple(__config__.get('system', {}).get('virtual_interface_prefixes', DEFAULT_VIRTUAL_INTERFACE_PREFIXES))
+    interfaces = list(get_ips(exclude_prefixes=prefixes or None).keys())
     return {"status": True, "data": interfaces}
+
+@__app__.route(f'{__api_prefix__}/set-virtual-interface-prefixes', methods=['POST'])
+@cross_origin()
+def set_virtual_interface_prefixes():
+    prefixes = request.json.get("prefixes")
+    if not isinstance(prefixes, list) or not all(isinstance(prefix, str) for prefix in prefixes):
+        return {"status": False, "error": "[ERROR] prefixes must be a list of strings"}
+    __on_config_changed__({'system': {'virtual_interface_prefixes': prefixes}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-temperature-unit', methods=['POST'])
 @cross_origin()
@@ -740,6 +751,7 @@ def catch_all(path):
 
 class PMDashboard():
     def __init__(self, device_info=None, database='pm_dashboard', config=None, log=None, get_logger=None):
+        global __config__
         global __device_info__, __log_path__, __enable_history__
         global __data_logger__, __db__, __log__, __restart_service__
         global AVAILABLE_OLED_PAGES
@@ -757,20 +769,26 @@ class PMDashboard():
             self.log = log or logging.getLogger(__name__)
         __log__ = self.log
 
-        if 'enable_history' not in config['system']:
-            config['system']['enable_history'] = False
-        __enable_history__ = config['system']['enable_history']
-        if 'database_retention_days' not in config['system']:
-            config['system']['database_retention_days'] = 30
-        database_retention_days = config['system']['database_retention_days'] 
+        __config__ = config
+        if 'enable_history' not in __config__['system']:
+            __config__['system']['enable_history'] = False
+        if 'virtual_interface_prefixes' not in __config__['system']:
+            __config__['system']['virtual_interface_prefixes'] = list(DEFAULT_VIRTUAL_INTERFACE_PREFIXES)
+        __enable_history__ = __config__['system']['enable_history']
+        if 'database_retention_days' not in __config__['system']:
+            __config__['system']['database_retention_days'] = 30
+        database_retention_days = __config__['system']['database_retention_days'] 
 
         if __enable_history__:
             __db__ = Database(database, log=log, retention_days=database_retention_days)
         self.data_logger = DataLogger(
             database=__db__,
-            interval=config['system']['data_interval'],
+            interval=__config__['system']['data_interval'],
             log=self.log)
         __data_logger__ = self.data_logger
+        self.data_logger.set_virtual_interface_prefixes(__config__['system']['virtual_interface_prefixes'])
+        if __db__ is not None:
+            __db__.set_virtual_prefixes(__config__['system']['virtual_interface_prefixes'])
 
         self.started = False
 
@@ -806,8 +824,16 @@ class PMDashboard():
             self.data_logger.set_interval(config['data_interval'])
             patch['data_interval'] = config['data_interval']
         if 'database_retention_days' in config:
-            __db__.set_retention_days(config['database_retention_days'])
-            patch['database_retention_days'] = config['database_retention_days']
+            if __db__ is not None:
+                __db__.set_retention_days(config['database_retention_days'])
+                patch['database_retention_days'] = config['database_retention_days']
+        if 'virtual_interface_prefixes' in config:
+            prefixes = config['virtual_interface_prefixes']
+            if isinstance(prefixes, list) and all(isinstance(prefix, str) for prefix in prefixes):
+                self.data_logger.set_virtual_interface_prefixes(prefixes)
+                if __db__ is not None:
+                    __db__.set_virtual_prefixes(prefixes)
+                patch['virtual_interface_prefixes'] = prefixes
         return patch
 
     @log_error
