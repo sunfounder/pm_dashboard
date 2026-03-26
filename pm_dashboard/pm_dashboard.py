@@ -39,6 +39,7 @@ __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
 __mqtt_connected__ = False
 __enable_history__ = False
+DEFAULT_VIRTUAL_INTERFACE_PREFIXES = ['veth', 'br-', 'docker', 'virbr', 'vmnet']
 
 __on_outside_config_changed__ = lambda config: None
 __on_inside_config_changed__ = lambda config: None
@@ -283,8 +284,18 @@ def get_disk_list():
 @__app__.route(f'{__api_prefix__}/get-network-interface-list')
 @cross_origin()
 def get_network_interface_list():
-    interfaces = list(get_ips().keys())
+    prefixes = tuple(__config__.get('system', {}).get('virtual_interface_prefixes', DEFAULT_VIRTUAL_INTERFACE_PREFIXES))
+    interfaces = list(get_ips(exclude_prefixes=prefixes or None).keys())
     return {"status": True, "data": interfaces}
+
+@__app__.route(f'{__api_prefix__}/set-virtual-interface-prefixes', methods=['POST'])
+@cross_origin()
+def set_virtual_interface_prefixes():
+    prefixes = request.json.get("prefixes")
+    if not isinstance(prefixes, list) or not all(isinstance(prefix, str) for prefix in prefixes):
+        return {"status": False, "error": "[ERROR] prefixes must be a list of strings"}
+    __on_config_changed__({'system': {'virtual_interface_prefixes': prefixes}})
+    return {"status": True, "data": "OK"}
 
 @__app__.route(f'{__api_prefix__}/set-temperature-unit', methods=['POST'])
 @cross_origin()
@@ -479,6 +490,8 @@ class PMDashboard():
         __config__ = config
         if 'enable_history' not in __config__['system']:
             __config__['system']['enable_history'] = False
+        if 'virtual_interface_prefixes' not in __config__['system']:
+            __config__['system']['virtual_interface_prefixes'] = list(DEFAULT_VIRTUAL_INTERFACE_PREFIXES)
         __enable_history__ = config['system']['enable_history']
 
         self.data_logger = DataLogger(
@@ -486,9 +499,11 @@ class PMDashboard():
             spc_enabled=spc_enabled,
             interval=__config__['system']['data_interval'],
             get_logger=get_logger)
+        self.data_logger.set_virtual_interface_prefixes(__config__['system']['virtual_interface_prefixes'])
         __data_logger__ = self.data_logger
         if __enable_history__:
             __db__ = Database(database, get_logger=get_logger)
+            __db__.set_virtual_prefixes(__config__['system']['virtual_interface_prefixes'])
 
         self.started = False
         __on_inside_config_changed__ = self.on_config_changed
@@ -516,8 +531,14 @@ class PMDashboard():
 
     @log_error
     def on_config_changed(self, config):
+        global __enable_history__, __db__
         if 'data_interval' in config['system']:
             self.data_logger.set_interval(config['system']['data_interval'])
+        if 'virtual_interface_prefixes' in config['system']:
+            prefixes = config['system']['virtual_interface_prefixes']
+            self.data_logger.set_virtual_interface_prefixes(prefixes)
+            if __db__ is not None:
+                __db__.set_virtual_prefixes(prefixes)
         if 'enable_history' in config['system']:
             if config['system']['enable_history'] == True:
                 if __enable_history__ == False:
