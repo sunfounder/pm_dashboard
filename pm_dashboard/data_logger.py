@@ -25,6 +25,8 @@ from sf_rpi_status import \
 
 class DataLogger:
 
+    DEFAULT_VIRTUAL_INTERFACE_PREFIXES = ['veth', 'br-', 'docker', 'virbr', 'vmnet']
+
     @log_error
     def __init__(self, database='pm_dashboard', interval=1, spc_enabled=False, get_logger=None):
         if get_logger is None:
@@ -45,6 +47,7 @@ class DataLogger:
 
         self.db = Database(database, get_logger=get_logger)
         self.interval = interval
+        self.virtual_interface_prefixes = list(self.DEFAULT_VIRTUAL_INTERFACE_PREFIXES)
         if spc_enabled:
             self.log.info("SPC peripheral enabled")
             from spc.spc import SPC
@@ -69,10 +72,20 @@ class DataLogger:
         self.interval = interval
 
     @log_error
+    def set_virtual_interface_prefixes(self, prefixes):
+        if isinstance(prefixes, list) and all(isinstance(prefix, str) for prefix in prefixes):
+            self.virtual_interface_prefixes = prefixes
+
+    def _get_exclude_prefixes(self):
+        prefixes = tuple(self.virtual_interface_prefixes)
+        return prefixes or None
+
+    @log_error
     def get_data(self):
+        exclude_prefixes = self._get_exclude_prefixes()
         boot_time = get_boot_time()
-        ips = get_ips()
-        macs = get_macs()
+        ips = get_ips(exclude_prefixes=exclude_prefixes)
+        macs = get_macs(exclude_prefixes=exclude_prefixes)
         network_connection_type = get_network_connection_type()
         network_speed = get_network_speed()
 
@@ -111,11 +124,9 @@ class DataLogger:
 
         data['boot_time'] = float(boot_time)
 
-        ips = get_ips()
         for name in ips:
             data[f'ip_{name}'] = ips[name]
 
-        macs = get_macs()
         for name in macs:
             data[f'mac_{name}'] = macs[name]
 
