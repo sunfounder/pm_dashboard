@@ -720,6 +720,11 @@ def set_database_retention_days():
 @cross_origin()
 def get_ips_endpoint():
     data = __get_ip_data__()
+    if not data or not data.get('ips'):
+        # Fallback: extract IP keys from cached data (old pm_auto)
+        raw = __read_data__()
+        ip_keys = ['ips', 'network_type'] + [k for k in raw if k.startswith('ip_') or k.startswith('mac_')]
+        data = {k: raw[k] for k in ip_keys if k in raw}
     return {"status": True, "data": data}
 
 @__app__.route('/<path:path>')
