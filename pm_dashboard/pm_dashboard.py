@@ -52,6 +52,7 @@ __mqtt_connected__ = False
 __enable_history__ = False
 
 __read_data__ = lambda: {}
+__get_ip_data__ = lambda: {}
 __read_config__ = lambda: {}
 __on_config_changed__ = lambda config: None
 __test_smtp__ = lambda: False
@@ -715,6 +716,12 @@ def set_database_retention_days():
     return {"status": True, "data": "OK"}
 
 # Catch-all route for single-page application
+@__app__.route(f'{__api_prefix__}/get-ips')
+@cross_origin()
+def get_ips_endpoint():
+    data = __get_ip_data__()
+    return {"status": True, "data": data}
+
 @__app__.route('/<path:path>')
 @cross_origin()
 def catch_all(path):
@@ -798,6 +805,11 @@ class PMDashboard():
         global __read_data__
         __read_data__ = func
         self.data_logger.set_read_data(func)
+
+    @log_error
+    def set_get_ip_data(self, func):
+        global __get_ip_data__
+        __get_ip_data__ = func
 
     @log_error
     def set_read_config(self, func):

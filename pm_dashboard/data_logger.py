@@ -54,6 +54,12 @@ class DataLogger:
             elif isinstance(value, dict):
                 continue
             new_data[key] = value
+
+        # Filter out IP/MAC keys — now served via /api/v1.0/get-ips
+        ip_keys = ['ips', 'network_type'] + [k for k in list(data.keys()) if k.startswith('ip_') or k.startswith('mac_')]
+        for k in ip_keys:
+            new_data.pop(k, None)
+
         return new_data
 
     @log_error
