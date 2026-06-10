@@ -588,7 +588,12 @@ def set_smtp_security():
 @cross_origin()
 def test_smtp():
     result = __test_smtp__()
-    status, error = result
+    if isinstance(result, (tuple, list)) and len(result) >= 2:
+        status, error = result[0], result[1]
+    elif result:
+        status, error = True, ""
+    else:
+        status, error = False, "SMTP test failed"
     if status:
         return {"status": status, "data": "OK"}
     else:
