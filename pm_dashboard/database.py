@@ -20,9 +20,47 @@ class Database:
         self.retention_days = retention_days
         self.influx_manually_started = False
         self.starting = False
+        self._field_keys_cache = {}
+        self._virtual_prefixes = self._build_virtual_field_prefixes(['veth', 'br-', 'docker', 'virbr', 'vmnet'])
 
         # initialize InfluxDB client
         self.client = InfluxDBClient(host='localhost', port=8086)
+
+    @staticmethod
+    def _build_virtual_field_prefixes(interface_prefixes):
+        return tuple(
+            f'{field_type}_{iface}'
+            for iface in interface_prefixes
+            for field_type in ('mac', 'ip')
+        )
+
+    @staticmethod
+    def _quote_identifier(identifier):
+        return '"' + identifier.replace('"', '\\"') + '"'
+
+    def set_virtual_prefixes(self, interface_prefixes):
+        if not isinstance(interface_prefixes, list) or not all(isinstance(prefix, str) for prefix in interface_prefixes):
+            return
+        self._virtual_prefixes = self._build_virtual_field_prefixes(interface_prefixes)
+        self._field_keys_cache.clear()
+
+    def get_stable_field_keys(self, measurement, max_age=60):
+        cached = self._field_keys_cache.get(measurement)
+        if cached and (time.time() - cached[0]) < max_age:
+            return cached[1]
+
+        try:
+            result = self.client.query(f'SHOW FIELD KEYS FROM "{measurement}"')
+            all_keys = [row['fieldKey'] for row in result.get_points()]
+            stable_keys = [
+                key for key in all_keys
+                if not key.startswith(self._virtual_prefixes)
+            ]
+            self._field_keys_cache[measurement] = (time.time(), stable_keys)
+            return stable_keys
+        except Exception as e:
+            self.log.warning(f"get_stable_field_keys failed for {measurement}: {e}")
+            return []
     
     def start(self):
         self.is_starting = True
@@ -208,7 +246,11 @@ class Database:
         if function not in ["mean", "sum", "min", "max", "count"]:
             self.log.error(f"Invalid function: {function}")
             return []
-        if keys != "*":
+        if keys == "*":
+            stable_keys = self.get_stable_field_keys(measurement)
+            if stable_keys:
+                keys = ",".join(self._quote_identifier(k) for k in stable_keys)
+        else:
             newKeys = []
             for k in keys.split(","):
                 newKeys.append(f'{function}("{k}") as "{k}"')
@@ -238,12 +280,18 @@ class Database:
         if not self.is_ready():
             self.log.error('Database is not ready')
             return []
+        if key == "*":
+            stable_keys = self.get_stable_field_keys(measurement)
+            if stable_keys:
+                key = ",".join(self._quote_identifier(k) for k in stable_keys)
 
         # Read data from last 1 second
         time_filter = "time < now() - 1s"
         query = f"SELECT {key} FROM {measurement} WHERE {time_filter} ORDER BY time DESC LIMIT {n}"
+
         with self.lock:
-            result = self.client.query(query)
+            for _ in range(3):
+                result = self.client.query(query)
 
         result = list(result.get_points())
         if n == 1:

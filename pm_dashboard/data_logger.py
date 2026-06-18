@@ -8,6 +8,8 @@ from .utils import log_error
 
 class DataLogger:
 
+    DEFAULT_VIRTUAL_INTERFACE_PREFIXES = ['veth', 'br-', 'docker', 'virbr', 'vmnet']
+
     @log_error
     def __init__(self, database=None, interval=1, log=None):
         self.log = log or logging.getLogger(app_name)
@@ -24,6 +26,7 @@ class DataLogger:
 
         self.db = database
         self.interval = interval
+        self.virtual_interface_prefixes = list(self.DEFAULT_VIRTUAL_INTERFACE_PREFIXES)
         
         self.status = {}
         self.__read_data__ = None
@@ -37,6 +40,15 @@ class DataLogger:
         self.interval = interval
 
     @log_error
+    def set_virtual_interface_prefixes(self, prefixes):
+        if isinstance(prefixes, list) and all(isinstance(prefix, str) for prefix in prefixes):
+            self.virtual_interface_prefixes = prefixes
+
+    def _get_exclude_prefixes(self):
+        prefixes = tuple(self.virtual_interface_prefixes)
+        return prefixes or None
+
+    @log_error
     def get_data(self):
         if self.__read_data__ is None:
             self.log.error("No read data function set")
@@ -45,8 +57,13 @@ class DataLogger:
         if data == {}:
             return {}
 
+        exclude_prefixes = self._get_exclude_prefixes()
         new_data = {}
         for key, value in data.items():
+            if key.startswith('ip_') or key.startswith('mac_'):
+                interface_name = key.split('_', 1)[1] if '_' in key else ''
+                if exclude_prefixes and interface_name.startswith(exclude_prefixes):
+                    continue
             if isinstance(value, bool):
                 value = int(value)
             elif isinstance(value, list):
