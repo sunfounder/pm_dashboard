@@ -2,6 +2,8 @@
 import threading
 import logging
 from os import listdir, path, remove
+import copy
+import re
 
 import flask
 from flask import request, send_from_directory
@@ -45,7 +47,9 @@ __app__ = flask.Flask(__name__, static_folder=__www_path__)
 __app__.logger.setLevel(logging.WARN)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-__cors__ = CORS(__app__)
+# CORS: same-origin only by default; optional allow-list via config['system']['cors_origins']
+__cors__ = CORS(__app__, origins=[])
+__app__.config['CORS_ORIGINS'] = []
 __app__.config['CORS_HEADERS'] = 'Content-Type'
 __device_info__ = {}
 __mqtt_connected__ = False
@@ -253,6 +257,10 @@ def get_time_range():
             start = request.args.get("start")
             end = request.args.get("end")
             key = request.args.get("key")
+            if key is None or key.strip() == "":
+                key = "*"
+            elif not re.match(r'^[A-Za-z0-9_]+(\s*,\s*[A-Za-z0-9_]+)*$', key):
+                return {"status": False, "error": "[ERROR] invalid key"}
             data = __db__.get_data_by_time_range("history", start, end, key)
             return {"status": True, "data": data}
         else:
@@ -260,10 +268,24 @@ def get_time_range():
     except Exception as e:
         return {"status": False, "error": str(e)}
 
+def _mask_sensitive(data):
+    '''Mask values of sensitive config keys (password/psk/secret/token).'''
+    if isinstance(data, dict):
+        masked = {}
+        for k, v in data.items():
+            if isinstance(k, str) and k.lower().endswith(('password', 'psk', 'secret', 'token')) and v not in (None, ''):
+                masked[k] = '******'
+            else:
+                masked[k] = _mask_sensitive(v)
+        return masked
+    if isinstance(data, list):
+        return [_mask_sensitive(item) for item in data]
+    return data
+
 @__app__.route(f'{__api_prefix__}/get-config')
 @cross_origin()
 def get_config():
-    return {"status": True, "data": __read_config__()}
+    return {"status": True, "data": _mask_sensitive(__read_config__())}
 
 @__app__.route(f'{__api_prefix__}/get-log-list')
 @cross_origin()
@@ -582,6 +604,8 @@ def set_smtp_password():
     smtp_password = request.json["password"]
     if smtp_password is None:
         return {"status": False, "error": "[ERROR] password not found"}
+    if smtp_password == '******':
+        return {"status": True, "data": "OK"}
     __on_config_changed__({'system': {'smtp_password': smtp_password}})
     return {"status": True, "data": "OK"}
 
@@ -769,6 +793,12 @@ class PMDashboard():
         else:
             self.log = log or logging.getLogger(__name__)
         __log__ = self.log
+
+        if config['system'].get('cors_origins'):
+            origins = config['system']['cors_origins']
+            if isinstance(origins, str):
+                origins = [o.strip() for o in origins.split(',') if o.strip()]
+            __app__.config['CORS_ORIGINS'] = origins
 
         if 'enable_history' not in config['system']:
             config['system']['enable_history'] = False
