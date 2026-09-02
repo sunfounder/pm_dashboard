@@ -75,10 +75,24 @@ def on_mqtt_connected(client, userdata, flags, rc):
     else:
         __mqtt_connected__ = False
 
+def _safe_log_file(name):
+    '''Resolve a log filename safely inside __log_path__.
+    Returns the full path, or None if the name is not a plain log file name.'''
+    if not isinstance(name, str) or name == "":
+        return None
+    if name in (".", "..") or name != path.basename(name):
+        return None
+    log_root = path.realpath(__log_path__)
+    full = path.realpath(path.join(log_root, name))
+    if path.commonpath([log_root, full]) != log_root:
+        return None
+    return full
+
 def _get_log(name, line_count=100, filter=[], level="INFO"):
-    if path.exists(f"{__log_path__}/{name}") == False:
+    file_path = _safe_log_file(name)
+    if file_path is None or path.exists(file_path) == False:
         return False
-    with open(f"{__log_path__}/{name}", 'r') as f:
+    with open(file_path, 'r') as f:
         lines = f.readlines()
         lines = lines[-line_count:]
         data = []
@@ -654,12 +668,11 @@ def clear_history():
 @cross_origin()
 def delete_log_file():
     filename = request.json["filename"]
-    if filename is None:
-        return {"status": False, "error": "[ERROR] file not found"}
-    if path.exists(f"{__log_path__}/{filename}") == False:
+    file_path = _safe_log_file(filename) if filename is not None else None
+    if file_path is None or path.exists(file_path) == False:
         return {"status": False, "error": f"[ERROR] file {filename} not found"}
     try:
-        remove(f"{__log_path__}/{filename}")
+        remove(file_path)
         return {"status": True, "data": "OK"}
     except Exception as e:
         return {"status": False, "error": str(e)}
