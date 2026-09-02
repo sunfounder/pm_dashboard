@@ -209,8 +209,12 @@ class Database:
             self.log.error(f"Invalid function: {function}")
             return []
         if keys != "*":
+            if not all(re.match(r'^[A-Za-z0-9_]+$', k.strip()) for k in keys.split(",")):
+                self.log.error(f"Invalid keys: {keys}")
+                return []
             newKeys = []
             for k in keys.split(","):
+                k = k.strip()
                 newKeys.append(f'{function}("{k}") as "{k}"')
             keys = ",".join(newKeys)
         duration = int(end_time) - int(start_time)
