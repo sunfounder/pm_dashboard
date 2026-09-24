@@ -2,6 +2,8 @@ from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 import json
 import logging
+import os
+import shutil
 import subprocess
 import time
 from math import floor
@@ -27,12 +29,14 @@ class Database:
     def start(self):
         self.is_starting = True
         if Database.is_influxdb_running():
-            import os
-            os.system("killall influxdb &> /dev/null")
-        self.log.info("Starting influxdb service")
-        self.start_influxdb()
-        # Wait 2 seconds for InfluxDB to start
-        time.sleep(2)
+            # Never take over an InfluxDB that is already running (for
+            # example the packaged influxdb.service): see start_influxdb().
+            self.log.info("InfluxDB is already running")
+        else:
+            self.log.info("Starting influxdb service")
+            self.start_influxdb()
+            # Wait 2 seconds for InfluxDB to start
+            time.sleep(2)
 
         self.log.debug("Waiting for InfluxDB to be ready")
         for _ in range(10):
@@ -71,8 +75,32 @@ class Database:
         except subprocess.CalledProcessError:
             return False
 
+    @staticmethod
+    def has_systemd_service():
+        """Return True when influxd is managed by the packaged unit."""
+        if shutil.which("systemctl") is None:
+            return False
+        for unit in (
+            "/etc/systemd/system/influxdb.service",
+            "/lib/systemd/system/influxdb.service",
+            "/usr/lib/systemd/system/influxdb.service",
+        ):
+            if os.path.exists(unit):
+                return True
+        return False
+
     def start_influxdb(self):
-        # Start InfluxDB in the background
+        # Prefer the packaged systemd service: it runs influxd as the
+        # 'influxdb' user, which owns /var/lib/influxdb.  Starting influxd
+        # directly runs it as the dashboard user instead and leaves files
+        # the service can no longer read/write (permission denied) after
+        # the next reboot or service restart.
+        if Database.has_systemd_service():
+            self.log.info("Starting InfluxDB through systemd (influxdb.service)")
+            subprocess.Popen(["systemctl", "start", "influxdb"])
+            self.influx_manually_started = False
+            return
+        self.log.warning("influxdb.service not found, starting influxd directly")
         subprocess.Popen(["influxd"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.influx_manually_started = True
 
